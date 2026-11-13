@@ -1,3 +1,5 @@
+import IVWorkspace from './components/IVWorkspace'
+const ivWorkspaceApi = (method,args) => window.ivstudio.workspace.call(method,args)
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { selectionFor } from './selection'
 import { setSimpleWords } from './words'
@@ -475,6 +477,7 @@ export default function App() {
         <img className="brand-logo" src={incognito ? ivMarkClosed : ivMark} alt="Infinite Variance" />
         <span className="mono brand-text">Infinite Variance</span>
         <span className="mono dim brand-text">/ Studio</span>
+        <IVWorkspace api={ivWorkspaceApi} appId="studio" disabled={incognito} projectId={productionId} onOpen={r=>{if(r.kind==='production'){setWelcome(null);openProject(r.id)}}} />
         {info?.testCopy && (
           <span className="mono test-copy">
             Test copy<span className="test-copy-more"> · separate data</span>

@@ -15,6 +15,7 @@ const on = (channel) => (cb) => {
 }
 
 contextBridge.exposeInMainWorld('ivstudio', {
+  workspace: { call: call('workspace:call') },
   app: { info: call('app:info') },
   // opt-in usage counting and the cloud beta signup (src/service/usage.js); time estimates (src/service/timing.js)
   usage: { status: call('usage:status'), set: call('usage:set'), preview: call('usage:preview'), joinBeta: call('usage:joinBeta') },
