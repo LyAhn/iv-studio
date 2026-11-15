@@ -450,14 +450,20 @@ const sequenceFields = {
   shotSeconds: z.number().refine((v) => SHOT_SECONDS.includes(v)).optional().describe(`Length of every shot: ${SHOT_SECONDS.join(' or ')} seconds`),
   steps: z.number().int().min(4).max(20).optional(),
   seed: z.number().int().min(0).optional(),
-  voiceRef: z.string().nullable().optional().describe('take: absolute path to a voice sample the whole take keeps'),
+  takeKind: z.enum(['plain', 'refs']).optional().describe('take: plain = the fl2va model and the prompts as written (the default); refs = the ref2va model with references carried into every shot (needs at least one: the character face picture, refs.pictures, voiceRef or refs.selfVoice). get_sequence shows take.model and take.script, exactly what each shot sends.'),
+  refs: z
+    .object({ face: z.boolean().optional().describe("Carry the character's face picture (default true)"), pictures: z.array(z.string()).max(4).optional().describe('Absolute paths: more pictures of the one main person (not places or other people)'), selfVoice: z.boolean().optional().describe("No voice sample: pin shot 1's own voice for the later shots") })
+    .optional()
+    .describe('take with takeKind refs: what to carry into every shot'),
+  startImage: z.string().nullable().optional().describe("take: absolute path to a picture shot 1 opens on (either kind)"),
+  voiceRef: z.string().nullable().optional().describe('take with takeKind refs: absolute path to a voice sample the whole take keeps'),
   shots: z
-    .array(z.object({ id: z.string().optional(), prompt: z.string(), mode: z.enum(['text', 'reference', 'frames']).optional(), media: media }))
+    .array(z.object({ id: z.string().optional(), prompt: z.string(), idea: z.string().optional().describe('The plain-words idea the prompt was written from (kept for the window)'), mode: z.enum(['text', 'reference', 'frames']).optional(), media: media }))
     .optional()
     .describe("One prompt per shot. Each later shot should open holding the previous shot's closing arrangement and stay quiet ~2 s before anyone speaks; end settled with ~2 s to spare. {char} = trigger word.")
 }
 tool('list_sequences', 'Sequences (several shots that play as one continuous video), newest first.', {}, () => studio.listSequences())
-tool('get_sequence', 'A sequence with its shots, versions (takes, shot-by-shot result, retakes) and render-outs.', { sequenceId: z.string() }, ({ sequenceId }) => studio.refreshSequence(sequenceId))
+tool('get_sequence', 'A sequence with its shots, versions (takes, shot-by-shot result, retakes), render-outs, and take: the one take\'s kind (plain or refs), the model it renders on, its references and script (each shot exactly as it is sent).', { sequenceId: z.string() }, ({ sequenceId }) => studio.refreshSequence(sequenceId))
 tool('save_sequence', 'Create a sequence (no sequenceId) or update its settings and shots.', { sequenceId: z.string().optional(), ...sequenceFields }, ({ sequenceId, ...patch }) =>
   sequenceId ? studio.saveSequence(sequenceId, patch) : studio.saveSequence(studio.createSequence().id, patch)
 )
@@ -1227,8 +1233,8 @@ tool('remake_render', `Remake, step 2 of 2: writes the six-section prompt with t
 tool('replace_history', 'Past Replace runs, newest first, with their status and result videos.', {}, async () => (await replace.history()).map((j) => ({ job: j.id, name: j.projectName, status: j.status, mode: j.plan?.replace?.mode, error: j.error, outputs: j.outputs })))
 
 // ---------- models and characters ----------
-const WORKFLOWS = ['text', 'frames', 'reference', 'continue', 'take', 'retake']
-tool('list_h3_models', 'H3 models the ComfyUI can load, each workflow\'s built-in default, and the model chosen in Settings for each (text, frames, reference, continue, take = Sequences one take, retake). Some models suit realism, others animation.', {}, async () => {
+const WORKFLOWS = ['text', 'frames', 'reference', 'continue', 'takePlain', 'take', 'retake']
+tool('list_h3_models', 'H3 models the ComfyUI can load, each workflow\'s built-in default, and the model chosen in Settings for each (text, frames, reference, continue, takePlain = Sequences one take, plain, take = Sequences one take with references, retake). Some models suit realism, others animation.', {}, async () => {
   const { models, defaults } = await studio.h3Models()
   return { models, defaults, chosen: readSettings(BASE).models || {} }
 })

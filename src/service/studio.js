@@ -16,7 +16,7 @@ import { applyFinishSpeed, applySpeed } from './speed.js'
 import { adaptGraph, capabilities, LIVE_NODE, withLivePreview } from './remote.js'
 import { Cast, resolveMentions, withCast } from './cast.js'
 import { contextIrGraph, fromContextIr, writeHarness, writeLocal, writeStoryLocal } from './prompter.js'
-import { cleanSequenceLoras, renderOutGraph, retakeGraph, SAVES, SEQUENCE_DEFAULTS, takeGraph, validateSequence } from './sequence.js'
+import { cleanSequenceLoras, MAX_REF_PICTURES, renderOutGraph, retakeGraph, SAVES, SEQUENCE_DEFAULTS, takeGraph, takeKindOf, takeReferences, takeScript, validateSequence } from './sequence.js'
 import { checkSetup, comboOptions, fileBase, modelFileMap, whyUnreached } from './setup.js'
 import { comfyPlace, installPacks, missingPacks, packsNeedingRuntime } from './nodepacks.js'
 import { checkUpdates, copySnapshot, MANAGER_PACK, packFolders, readRecord, reenable, restart, undo, update, writeRecord } from './comfyupdate.js'
@@ -923,6 +923,8 @@ export class Studio {
     const chars = this.characters()
     for (const p of this.listProjects()) {
       if (p.trainingId) continue // a character training's test renders
+      // a deleted sequence's shot renders (GitHub #41): its sequence is gone, so they'd open a blank page
+      if (p.sequenceId && !fs.existsSync(this.sequenceFile(p.sequenceId))) continue
       const jobs = this.listJobs(p.id)
       // a shot hunted more than once numbers its runs, so two takes never share the label "Preview 1"
       const byAge = (a, b) => String(a.createdAt).localeCompare(String(b.createdAt))
@@ -979,7 +981,7 @@ export class Studio {
     const listed = (n) => all.find((o) => fileBase(o) === fileBase(n)) || n
     return {
       models: all.filter((n) => /h3|minimax/i.test(n)),
-      defaults: Object.fromEntries(Object.entries({ text: t['101'].inputs.unet_name, frames: t['201'].inputs.unet_name, reference: t['301'].inputs.unet_name, continue: t['601'].inputs.unet_name, take: t['301'].inputs.unet_name, retake: t['301'].inputs.unet_name }).map(([k, v]) => [k, listed(v)]))
+      defaults: Object.fromEntries(Object.entries({ text: t['101'].inputs.unet_name, frames: t['201'].inputs.unet_name, reference: t['301'].inputs.unet_name, continue: t['601'].inputs.unet_name, takePlain: t['201'].inputs.unet_name, take: t['301'].inputs.unet_name, retake: t['301'].inputs.unet_name }).map(([k, v]) => [k, listed(v)]))
     }
   }
 
@@ -1093,13 +1095,24 @@ export class Studio {
   // Edits name, settings and shots. Renders already made stay; shot-by-shot shots go stale when their inputs change.
   saveSequence(id, patch) {
     const s = this.getSequence(id)
-    const allowed = ['name', 'method', 'character', 'aspect', 'megapixels', 'shotSeconds', 'steps', 'seed', 'voiceRef', 'shots', 'loras']
+    const allowed = ['name', 'method', 'character', 'aspect', 'megapixels', 'shotSeconds', 'steps', 'seed', 'voiceRef', 'shots', 'loras', 'takeKind', 'refs', 'startImage', 'story']
     for (const k of allowed) if (k in (patch || {})) s[k] = patch[k]
     s.loras = cleanSequenceLoras(s.loras)
-    s.shots = s.shots.map((sh) => ({ id: sh.id || randomUUID().slice(0, 6), prompt: sh.prompt || '', mode: sh.mode || 'text', media: sh.media || [] }))
+    if ('takeKind' in (patch || {})) s.takeKind = patch.takeKind === 'refs' ? 'refs' : 'plain'
+    if (s.refs) s.refs = { face: s.refs.face !== false, pictures: (Array.isArray(s.refs.pictures) ? s.refs.pictures : []).filter((p) => typeof p === 'string' && p).slice(0, MAX_REF_PICTURES), selfVoice: !!s.refs.selfVoice }
+    if (typeof s.story !== 'string') delete s.story
+    // a shot keeps the writer's idea (GitHub #40), so it is there when you come back
+    s.shots = s.shots.map((sh) => ({ id: sh.id || randomUUID().slice(0, 6), prompt: sh.prompt || '', mode: sh.mode || 'text', media: sh.media || [], ...(typeof sh.idea === 'string' && sh.idea ? { idea: sh.idea } : {}) }))
     return this.writeSequence(s)
   }
+  // Deletes the sequence, its renders' records and its shot-by-shot shots' project, as deleting a shot does
+  // (GitHub #41: they stayed in the Library and Dashboard). The video files themselves stay where they are.
   deleteSequence(id) {
+    const s = readJson(this.sequenceFile(id), null)
+    if (s) {
+      for (const j of s.jobs || []) fs.rmSync(this.jobFile(j), { force: true })
+      if (s.projectId && fs.existsSync(this.projectFile(s.projectId))) this.deleteProject(s.projectId)
+    }
     fs.rmSync(this.sequenceFile(id), { force: true })
     return true
   }
@@ -1134,7 +1147,12 @@ export class Studio {
       const j = job(r.jobId)
       return { ...r, job: j ? this.publicJob(j) : null, file: out(j, 'final') }
     })
-    return { sequence: s, shots, versions, renders }
+    let take = null
+    try {
+      const t = this.takeSetup(s)
+      take = { kind: t.kind, model: t.model, face: t.face, references: t.refs, script: t.script }
+    } catch {}
+    return { sequence: s, shots, versions, renders, take }
   }
 
   // sequenceView after asking ComfyUI about any of the sequence's jobs that haven't finished.
@@ -1163,15 +1181,30 @@ export class Studio {
     return j
   }
 
+  // A one take is plain (fl2va, the prompts as written) or with references (ref2va, the references carried into
+  // every shot); GitHub #38. What it uses and sends, for the sequence page and get_sequence.
+  takeSetup(s) {
+    const kind = takeKindOf(s)
+    const character = s.character === 'none' ? null : this.characters().find((c) => c.id === s.character) || null
+    const face = character ? this.facePicture(character, this.resourcesDir) : null
+    const refs = kind === 'refs' ? takeReferences(s, face && fs.existsSync(face) ? face : null) : null
+    const t = this.template
+    const model = kind === 'refs' ? this.models.take || t['301'].inputs.unet_name : this.models.takePlain || t['201'].inputs.unet_name
+    return { kind, model, refs, face: face && fs.existsSync(face) ? face : null, script: takeScript(s, refs) }
+  }
+
   async renderTake(id) {
     const s = this.getSequence(id)
-    const character = this.sequenceCharacter(s)
-    const voiceRef = s.voiceRef ? await this.stage(s.voiceRef, 'iv_studio') : null
+    const setup = this.takeSetup(s)
+    const character = validateSequence(s, this.characters(), { face: setup.face })
     const n = s.versions.length + 1
     const name = `${slug(s.name)}_${s.id}_v${n}`
-    const { graph, resolved } = takeGraph({ template: this.template, seq: s, character, name, voiceRef, unet: this.models.take })
-    const j = await this.submitGraph({ kind: 'take', graph, sequenceId: s.id, name, plan: { saves: SAVES, resolved } })
-    s.versions.push({ id: `v${n}`, kind: 'take', label: `Take ${s.versions.filter((v) => v.kind === 'take').length + 1}`, jobId: j.id, createdAt: j.createdAt, seed: s.seed })
+    const refs = setup.refs ? { pictures: [], voice: setup.refs.voice ? await this.stage(setup.refs.voice, 'iv_studio') : null, selfVoice: setup.refs.selfVoice } : null
+    for (const p of setup.refs?.pictures || []) refs.pictures.push(await this.stage(p, 'iv_studio'))
+    const startImage = s.startImage ? await this.stage(s.startImage, 'iv_studio') : null
+    const { graph, resolved } = takeGraph({ template: this.template, seq: s, character, name, unet: setup.model, refs, startImage })
+    const j = await this.submitGraph({ kind: 'take', graph, sequenceId: s.id, name, plan: { saves: SAVES, resolved: { ...resolved, takeKind: setup.kind, model: setup.model, references: setup.refs ? { pictures: setup.refs.pictures.length, voice: !!setup.refs.voice, selfVoice: setup.refs.selfVoice } : null, startImage: !!startImage } } })
+    s.versions.push({ id: `v${n}`, kind: 'take', takeKind: setup.kind, label: `Take ${s.versions.filter((v) => v.kind === 'take').length + 1}${setup.kind === 'refs' ? ' · with references' : ''}`, jobId: j.id, createdAt: j.createdAt, seed: s.seed })
     return this.sequenceJob(s, j)
   }
 

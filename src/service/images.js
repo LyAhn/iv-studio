@@ -392,7 +392,13 @@ export function imageGraph({ family, mode = 'generate', unet, te, vae, loras = [
       }
     }
     const cond = add('MiniMaxH3ImageConditioning', inputs)
-    save(ksample(model, [cond, 0], [add('ConditioningZeroOut', { conditioning: [cond, 0] }), 0], repeat([cond, 1])))
+    const neg = [add('ConditioningZeroOut', { conditioning: [cond, 0] }), 0]
+    // H3 Image's sampler takes one picture at a time ("MiniMax H3 supports batch size 1", GitHub #39), so several
+    // pictures are separate samplers on the same conditioning, each on its own seed (seed, seed + 1000, ...)
+    for (let i = 0; i < batch; i++) {
+      const out = [add('KSampler', { model, seed: seed + i * 1000, steps, cfg, sampler_name: sampler, scheduler: 'simple', denoise: 1, positive: [cond, 0], negative: neg, latent_image: [cond, 1] }), 0]
+      save(out)
+    }
   } else if (family === 'zimage') {
     const shifted = [add('ModelSamplingAuraFlow', { model, shift: 3 }), 0]
     const pos = encode(prompt)

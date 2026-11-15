@@ -7,7 +7,8 @@ import Stage from './Stage'
 import { ToolShelf, ShelfTile, Step, Choices, WorkflowNeeds } from './FlowKit'
 import { AspectTiles } from './CreateKit'
 import TileDelete from './TileDelete'
-import PromptWriter, { StoryWriter } from './PromptWriter'
+import PromptWriter, { StoryWriter, isWriting } from './PromptWriter'
+import { fileUrl } from './edit/model'
 import { LoraPicker, LoraThumb, loraTitle, useYours } from './Loras'
 
 const MAX_LORAS = 4 // sequence.js MAX_SEQUENCE_LORAS
@@ -23,6 +24,20 @@ const RETAKE_MODES = [
 // Measured on an RTX 4090: a 0.4 MP take renders at about 19 s per second of video; time grows with pixels.
 const estimateMinutes = (seconds, mp) => Math.max(1, Math.round((seconds * 19 * (mp / 0.4)) / 60))
 const newId = () => Math.random().toString(36).slice(2, 8)
+
+// A story's shots, keeping the ids of the shots already there.
+const storyShots = (list, shots) => list.map((prompt, k) => ({ id: shots[k]?.id || newId(), prompt, mode: 'text', media: [] }))
+
+// A writer that finishes after its card has gone (GitHub #40) hands its prompt here: to the sequence's editor when
+// it's open, else straight into the saved sequence.
+const openEditors = new Map() // sequence id -> apply({ shot, prompt } | { list })
+async function lateWrite(seqId, result) {
+  const apply = openEditors.get(seqId)
+  if (apply) return apply(result)
+  const { sequence } = await window.ivstudio.sequences.get(seqId)
+  const shots = result.list ? storyShots(result.list, sequence.shots) : sequence.shots.map((s) => (s.id === result.shot ? { ...s, prompt: result.prompt } : s))
+  await window.ivstudio.sequences.save(seqId, { shots })
+}
 
 const SHOT_HINT =
   'Shots join into one continuous video. Describe the place the same way in every shot. Each later shot opens holding the previous shot\'s closing pose and stays quiet for about two seconds before anyone speaks. Every shot ends settled, with the line finished and about two seconds to spare. Keep lines to about 15 words for 10 s shots, 27 for 15 s. Write {char} where the character goes; dialogue as <d>[English] Your line.</d>'
@@ -89,8 +104,10 @@ function Seg({ value, options, onChange, format = (v) => v }) {
   )
 }
 
-function ShotCard({ shot, i, count, onChange, onMove, onDuplicate, onDelete, writer, focused }) {
-  const [writing, setWriting] = useState(false)
+function ShotCard({ shot, i, count, onChange, onMove, onDuplicate, onDelete, writer, focused, sent, seqId }) {
+  const key = `seq:${seqId}:${shot.id}`
+  // open again on what you left: an idea typed, or a write still running
+  const [writing, setWriting] = useState(() => !!shot.idea || isWriting(key))
   return (
     <div id={`seq-shot-${shot.id}`} className={`seq-shot ${focused ? 'focused' : ''}`}>
       <div className="seq-shot-head">
@@ -113,8 +130,122 @@ function ShotCard({ shot, i, count, onChange, onMove, onDuplicate, onDelete, wri
           </button>
         </div>
       </div>
-      {writing && <PromptWriter compact context={writer.context} current={shot.prompt} onWritten={(prompt) => onChange({ prompt })} notify={writer.notify} go={writer.go} />}
+      {writing && (
+        <PromptWriter
+          compact
+          context={writer.context}
+          current={shot.prompt}
+          onWritten={(prompt) => onChange({ prompt })}
+          idea={shot.idea || ''}
+          onIdea={(idea) => onChange({ idea })}
+          lastingKey={key}
+          onLate={(prompt) => lateWrite(seqId, { shot: shot.id, prompt }).catch((err) => writer.notify(err.message))}
+          notify={writer.notify}
+          go={writer.go}
+        />
+      )}
       <textarea className="prompt seq-prompt" rows={5} value={shot.prompt} placeholder="{char} sits at the kitchen table… and says: <d>[English] …</d>" onChange={(e) => onChange({ prompt: e.target.value })} />
+      {sent?.text && (
+        <details className="seq-sent">
+          <summary className="mono dim">What gets sent</summary>
+          <pre className="seq-sent-text">{sent.char ? sent.text.replaceAll('{char}', sent.char.trigger) : sent.text}</pre>
+          <p className="small dim">
+            {sent.kind === 'refs'
+              ? 'H3 Multishot puts this in detailed_description and adds the ref2va sections around it (subject_definitions, summary, retention_analysis, non_diegetic_music: N/A). The first line binds your references.'
+              : 'Sent exactly as written, to the fl2va model. Shots after the first open on the last frame of the one before.'}
+          </p>
+        </details>
+      )}
+    </div>
+  )
+}
+
+// One take comes in two kinds (GitHub #38): Plain runs on fl2va with the prompts as written; With references runs
+// on ref2va and carries the character's face, more pictures of the person and a voice into every shot.
+function TakeKind({ seq, take, char, edit }) {
+  // the page's own choice first: the saved view catches up half a second later
+  const kind = seq.takeKind === 'refs' || seq.takeKind === 'plain' ? seq.takeKind : take?.kind || 'plain'
+  const refs = { face: true, pictures: [], selfVoice: false, ...(seq.refs || {}) }
+  const setRefs = (patch) => edit({ refs: { ...refs, ...patch } })
+  const pics = (take?.face && refs.face ? 1 : 0) + refs.pictures.length
+  const model = (take?.model || '').split(/[\\/]/).pop().replace(/\.safetensors$/, '')
+  return (
+    <div className="seq-kind">
+      <Choices
+        label="Kind of take"
+        className="flow-two"
+        value={kind}
+        onChange={(takeKind) => edit({ takeKind })}
+        options={[
+          ['plain', 'Plain', 'The fl2va model and your prompts as written. Each shot opens on the last frame of the one before. Best for most takes.', 'fl2va'],
+          ['refs', 'With references', 'The ref2va model carries a face, pictures of the person or a voice into every shot, so they hold across the take. Needs at least one.', 'ref2va']
+        ]}
+      />
+      {model && <p className="small dim">This take renders on <span className="mono">{model}</span> (change it in Settings → Models).</p>}
+      {kind === 'refs' && (
+        <div className="seq-refs">
+          <div className="row">
+            <span className="row-label">Pictures</span>
+            <div className="seq-ref-pics">
+              {take?.face && (
+                <label className={`seq-ref-face ${refs.face ? 'on' : ''}`} title={`${char?.name || 'The character'}'s face picture`}>
+                  <img className="seq-ref-pic" src={fileUrl(take.face)} alt="" />
+                  <input type="checkbox" checked={refs.face} onChange={(e) => setRefs({ face: e.target.checked })} />
+                  <span className="small">{char?.name?.split(' ')[0] || 'Face'}</span>
+                </label>
+              )}
+              {refs.pictures.map((p, k) => (
+                <span key={p} className="seq-ref-face on">
+                  <img className="seq-ref-pic" src={fileUrl(p)} alt="" />
+                  <button className="link-btn mono" onClick={() => setRefs({ pictures: refs.pictures.filter((_, j) => j !== k) })}>
+                    Remove
+                  </button>
+                </span>
+              ))}
+              {pics < 4 && (
+                <button
+                  className="btn btn-small"
+                  onClick={async () => {
+                    const files = await window.ivstudio.files.pick('picture')
+                    if (files.length) setRefs({ pictures: [...refs.pictures, ...files].slice(0, 4 - (take?.face && refs.face ? 1 : 0)) })
+                  }}
+                >
+                  + Picture of the person
+                </button>
+              )}
+            </div>
+          </div>
+          <p className="small dim">Pictures of the one main person, up to 4: H3 Multishot treats every picture as that person, so not a place or someone else.</p>
+          <div className="row">
+            <span className="row-label">Voice</span>
+            <div className="voice-control">
+              <button
+                className="btn btn-small"
+                onClick={async () => {
+                  const [file] = await window.ivstudio.files.pick('audio')
+                  if (file) edit({ voiceRef: file })
+                }}
+              >
+                {seq.voiceRef ? 'Change' : '+ Voice sample'}
+              </button>
+              {seq.voiceRef ? (
+                <>
+                  <span className="mono small">{seq.voiceRef.split(/[\\/]/).pop()}</span>
+                  <button className="link-btn mono" onClick={() => edit({ voiceRef: null })}>
+                    Remove
+                  </button>
+                </>
+              ) : (
+                <label className="check small">
+                  <input type="checkbox" checked={refs.selfVoice} onChange={(e) => setRefs({ selfVoice: e.target.checked })} /> Keep shot 1’s voice (no sample needed)
+                </label>
+              )}
+            </div>
+          </div>
+          {!take?.references?.count && <p className="small pink">Add at least one reference, or switch to Plain.</p>}
+          <p className="small dim">Write each shot as usual. IV Studio opens it with a line naming the references (“{'{char}'} looks like the person in &lt;Picture 1&gt;.”), and H3 Multishot adds the ref2va sections; open “What gets sent” under a shot to see it.</p>
+        </div>
+      )}
     </div>
   )
 }
@@ -311,8 +442,10 @@ export function SequenceEditor({ sequenceId, characters, notify, go, jobs: live,
     return v
   }, [sequenceId])
 
+  // a sequence deleted elsewhere (or one an old link points at) says so instead of a blank page (GitHub #41)
+  const [gone, setGone] = useState(false)
   useEffect(() => {
-    load()
+    load().catch((err) => (/No sequence/.test(err.message) ? setGone(true) : notify(err.message)))
   }, [load])
 
   // Reload when a job of this sequence changes state.
@@ -337,6 +470,17 @@ export function SequenceEditor({ sequenceId, characters, notify, go, jobs: live,
     saveTimer.current = setTimeout(() => flush().then(load).catch((err) => notify(err.message)), 500)
   }
   useEffect(() => () => flush(), [])
+  // late writer results land in this editor while it's open (lateWrite)
+  const latest = useRef(null)
+  latest.current = { shots: seq?.shots || [], edit }
+  useEffect(() => {
+    const apply = ({ shot, prompt, list }) => {
+      const { shots: now, edit: put } = latest.current
+      put({ shots: list ? storyShots(list, now) : now.map((s) => (s.id === shot ? { ...s, prompt } : s)) })
+    }
+    openEditors.set(sequenceId, apply)
+    return () => openEditors.get(sequenceId) === apply && openEditors.delete(sequenceId)
+  }, [sequenceId])
 
   const shots = seq?.shots || []
   const setShot = (i, patch) => edit({ shots: shots.map((s, j) => (j === i ? { ...s, ...patch } : s)) })
@@ -406,6 +550,15 @@ export function SequenceEditor({ sequenceId, characters, notify, go, jobs: live,
     setPanel(null)
   }
 
+  if (gone)
+    return (
+      <div className="page">
+        <Hero art="sequences" help="sequence" back={{ label: 'All sequences', onClick: () => go('sequences') }} kicker="Sequence">
+          <h1>This sequence was deleted</h1>
+        </Hero>
+        <p className="dim">Its renders are still on your PC, but the sequence itself is gone.</p>
+      </div>
+    )
   if (!seq || !view) return null
   const char = characters.find((c) => c.id === seq.character)
   // a sequence renders its character with a LoRA (sequence.js refuses RefMod-only characters), so only those are offered
@@ -432,6 +585,7 @@ export function SequenceEditor({ sequenceId, characters, notify, go, jobs: live,
             ['shots', 'Shot by shot', 'Hunt and pick each shot in turn; each carries on from the end of the one before. Change a shot and only the shots after it need redoing.']
           ]}
         />
+        {seq.method === 'take' && <TakeKind seq={seq} take={view.take} char={char} edit={edit} />}
       </Step>
 
       <Step n={2} title="The shots" sub={char ? `Write {char} for ${char.name.split(' ')[0]} (${char.trigger}). Up to 8 shots of ${seq.shotSeconds} s.` : `No character. Up to 8 shots of ${seq.shotSeconds} s.`}>
@@ -439,7 +593,11 @@ export function SequenceEditor({ sequenceId, characters, notify, go, jobs: live,
           character={seq.character}
           shotSeconds={seq.shotSeconds}
           existing={shots.filter((s) => s.prompt.trim()).length}
-          onShots={(list) => edit({ shots: list.map((prompt, k) => ({ id: shots[k]?.id || newId(), prompt, mode: 'text', media: [] })) })}
+          onShots={(list) => edit({ shots: storyShots(list, shots) })}
+          story={seq.story || ''}
+          onStory={(story) => edit({ story })}
+          lastingKey={`story:${sequenceId}`}
+          onLate={(list) => lateWrite(sequenceId, { list }).catch((err) => notify(err.message))}
           notify={notify}
         />
         <details className="seq-hint">
@@ -458,6 +616,8 @@ export function SequenceEditor({ sequenceId, characters, notify, go, jobs: live,
             onDelete={() => edit({ shots: shots.filter((_, j) => j !== i) })}
             writer={{ notify, go, context: { mode: 'text', seconds: seq.shotSeconds, aspect: seq.aspect, character: seq.character, sequence: true, previous: i > 0 ? shots[i - 1].prompt : null } }}
             focused={focused === s.id}
+            seqId={sequenceId}
+            sent={seq.method === 'take' ? { text: view.take?.script?.[i], kind: view.take?.kind, char } : null}
           />
         ))}
         <button className="btn btn-small seq-add" disabled={shots.length >= 8} onClick={() => edit({ shots: [...shots, { id: newId(), prompt: '', mode: 'text', media: [] }] })}>
@@ -526,27 +686,25 @@ export function SequenceEditor({ sequenceId, characters, notify, go, jobs: live,
           </div>
         </div>
         {seq.method === 'take' && (
-          <div className="row">
-            <span className="row-label">Voice sample</span>
+          <div className="row seq-start">
+            <span className="row-label">First frame</span>
             <div className="voice-control">
+              {seq.startImage && <img className="seq-ref-pic" src={fileUrl(seq.startImage)} alt="Shot 1's first frame" />}
               <button
                 className="btn btn-small"
                 onClick={async () => {
-                  const [file] = await window.ivstudio.files.pick('audio')
-                  if (file) edit({ voiceRef: file })
+                  const [file] = await window.ivstudio.files.pick('picture')
+                  if (file) edit({ startImage: file })
                 }}
               >
-                {seq.voiceRef ? 'Change' : '+ Voice to keep'}
+                {seq.startImage ? 'Change' : '+ First frame'}
               </button>
-              {seq.voiceRef ? (
-                <>
-                  <span className="mono small">{seq.voiceRef.split(/[\\/]/).pop()}</span>
-                  <button className="link-btn mono" onClick={() => edit({ voiceRef: null })}>
-                    Remove
-                  </button>
-                </>
+              {seq.startImage ? (
+                <button className="link-btn mono" onClick={() => edit({ startImage: null })}>
+                  Remove
+                </button>
               ) : (
-                <span className="dim small">Optional. A short clean recording the whole take keeps as the voice.</span>
+                <span className="dim small">Optional. Shot 1 opens on this picture; the rest carry on from it.</span>
               )}
             </div>
           </div>

@@ -46,8 +46,9 @@ const WORKFLOWS = [
   ['frames', 'First / last frame', 'fl2va'],
   ['continue', 'Continue a video', 'fl2va'],
   ['reference', 'References', 'ref2va'],
-  ['take', 'Sequences · one take', 'ref2va'],
-  ['retake', 'Sequences · retake', 'ref2va']
+  ['takePlain', 'Sequences · one take, plain', 'fl2va', 'Plain prompts, nothing carried into the shots. Each shot opens on the last frame of the one before, which fl2va lands exactly.'],
+  ['take', 'Sequences · one take, with references', 'ref2va', 'The character’s face, other pictures of the person or a voice ride into every shot; only ref2va reads them.'],
+  ['retake', 'Sequences · retake', 'ref2va', 'A retake reads the finished take as a reference and keeps everything outside the stretch, which needs ref2va.']
 ]
 const short = (n) => n.split(/[\\/]/).pop().replace(/\.safetensors$/, '')
 const kindOf = (n) => (/fl2va/i.test(n) ? 'fl2va' : /ref2va|omniref/i.test(n) ? 'ref2va' : null)
@@ -451,11 +452,11 @@ function ModelCard({ n, settings, setSettings, notify }) {
       {info?.error && <p className="small pink set-plain">ComfyUI didn't answer: {info.error}</p>}
       {!info && <p className="small dim set-plain">Asking ComfyUI…</p>}
       {info?.models &&
-        WORKFLOWS.map(([id, label, want]) => {
+        WORKFLOWS.map(([id, label, want, hint]) => {
           const value = choices[id] || ''
           const kind = kindOf(value || info.defaults[id])
           return (
-            <SetField key={id} label={label} tag={want} warn={kind && kind !== want ? `This workflow expects a ${want} model.` : null}>
+            <SetField key={id} label={label} tag={want} hint={hint} warn={kind && kind !== want ? `This workflow expects a ${want} model.` : null}>
               <select className={value ? 'set-changed' : ''} value={value} onChange={(e) => choose(id, e.target.value)}>
                 <option value="">Default · {short(info.defaults[id])}</option>
                 {info.models.map((m) => (

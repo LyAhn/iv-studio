@@ -162,8 +162,10 @@ export const TOURS = {
     title: 'A sequence',
     steps: [
       { at: 'step:How it renders', title: 'How it renders', text: 'One take renders every shot together, seamless but all or nothing. Shot by shot lets you pick each shot in turn.' },
-      { at: 'step:The shots', title: 'The shots', text: 'Write each shot, or let the writer draft them all from a story. Describe the place the same way in every shot so they join cleanly.' },
-      { at: 'step:Look and size', title: 'Look and size', text: 'Who plays it, any LoRAs for every shot, the frame shape, the size and each shot’s length.' },
+      { at: '.seq-kind', title: 'Plain or with references', text: 'A one take is Plain (the fl2va model, your prompts as written) or With references (ref2va, carrying a face, pictures of the person or a voice into every shot).' },
+      { at: 'step:The shots', title: 'The shots', text: 'Write each shot, or let the writer draft them all from a story. Your ideas stay when you leave, and a write still running finishes into its shot.' },
+      { at: '.seq-sent', title: 'What gets sent', text: 'Each shot shows exactly what the take sends, and whether H3 Multishot wraps it in the ref2va sections.' },
+      { at: 'step:Look and size', title: 'Look and size', text: 'Who plays it, any LoRAs, a first frame for shot 1, the frame shape, the size and each shot’s length.' },
       { at: 'step:Render', title: 'Render', text: 'Shows the length and a rough time before you start.' },
       { at: 'step:Versions', title: 'Versions', text: 'Every take lands here. Retake redoes a stretch; Render out makes the final with clean-up and upscaling.' }
     ]

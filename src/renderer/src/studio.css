@@ -16738,3 +16738,16 @@ html.chat-window body {
 .wiz-settings-stale {
   color: var(--paper);
 }
+
+/* Sequences: the kind of take (GitHub #38) and what each shot sends */
+.seq-kind { display: grid; gap: 10px; margin-top: 14px; }
+.seq-refs { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; }
+.seq-ref-pics { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.seq-ref-face { display: grid; justify-items: center; gap: 4px; opacity: 0.55; cursor: pointer; }
+.seq-ref-face.on { opacity: 1; }
+.seq-ref-face input { margin: 0; }
+.seq-ref-pic { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; display: block; }
+.seq-start .voice-control { align-items: center; }
+.seq-sent { margin-top: 6px; }
+.seq-sent summary { cursor: pointer; font-size: 12px; }
+.seq-sent-text { white-space: pre-wrap; word-break: break-word; font-size: 12px; line-height: 1.5; max-height: 220px; overflow: auto; padding: 10px 12px; margin: 8px 0 6px; border-radius: 8px; background: rgba(0, 0, 0, 0.3); }

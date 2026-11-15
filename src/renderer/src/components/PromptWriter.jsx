@@ -15,12 +15,57 @@ export function sendIdea(idea, write = true) {
   window.dispatchEvent(new CustomEvent('iv:idea'))
 }
 
+// Writes that outlive the card that started them (GitHub #40): leaving a sequence while its writer works no longer
+// loses the prompt. A write started with a key keeps running; while a card with that key is on screen the result
+// goes to it (and it shows "Writing…" when you come back), otherwise to the onLate the last card gave.
+const lasting = new Map() // key -> { owner, liveRef, lateRef, done: Set<setBusy> }
+export const isWriting = (key) => lasting.has(key)
+function useLasting(key, onResult, onLate) {
+  const me = useRef({})
+  const live = useRef(onResult)
+  live.current = onResult
+  const late = useRef(onLate)
+  late.current = onLate
+  const [busy, setBusy] = useState(() => !!(key && lasting.has(key)))
+  useEffect(() => {
+    if (!key) return
+    const e = lasting.get(key)
+    if (e) Object.assign(e, { owner: me.current, liveRef: live, lateRef: late }), e.done.add(setBusy), setBusy(true)
+    return () => {
+      const cur = lasting.get(key)
+      if (!cur) return
+      if (cur.owner === me.current) cur.owner = null
+      cur.done.delete(setBusy)
+    }
+  }, [key])
+  async function run(make, onError) {
+    const e = { owner: me.current, liveRef: live, lateRef: late, done: new Set([setBusy]) }
+    if (key) lasting.set(key, e)
+    setBusy(true)
+    try {
+      const value = await make()
+      if (!key || e.owner) e.liveRef.current?.(value)
+      else e.lateRef.current?.(value)
+    } catch (err) {
+      onError(err)
+    } finally {
+      if (key && lasting.get(key) === e) lasting.delete(key)
+      for (const f of e.done) f(false)
+    }
+  }
+  return [busy, run]
+}
+
 // "Write it for me": a plain-words idea in, a finished H3 prompt out. context carries what the writer
 // should respect (mode, seconds, aspect, character, media, sequence, previous shot). names: who can go on the
 // staging board; its exact screen-side words go to the writer with the idea. onPrevis(clip): the board's grey
 // previs clip, for the form to add as a video reference (then the words name it as <Video n>).
-export default function PromptWriter({ context, current, onWritten, notify, go, compact = false, names = null, onPrevis = null, listen = false }) {
-  const [idea, setIdea] = useState('')
+// idea + onIdea: the idea kept by the page (a sequence shot saves it). lastingKey + onLate: the write keeps going
+// if the card goes away, and onLate gets the prompt then (see useLasting).
+export default function PromptWriter({ context, current, onWritten, notify, go, compact = false, names = null, onPrevis = null, listen = false, idea: ideaProp, onIdea, lastingKey = null, onLate = null }) {
+  const [ideaLocal, setIdeaLocal] = useState('')
+  const idea = ideaProp ?? ideaLocal
+  const setIdea = onIdea || setIdeaLocal
   // listen (Create's writer only): take ideas sent with sendIdea, and write them when asked to
   const [writeNow, setWriteNow] = useState(false)
   useEffect(() => {
@@ -56,9 +101,9 @@ export default function PromptWriter({ context, current, onWritten, notify, go, 
       setDrawing(false)
     }
   }
-  const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState(null)
   const [undo, setUndo] = useState(null)
+  const [busy, run] = useLasting(lastingKey, (text) => (setUndo(current || ''), onWritten(text)), onLate)
 
   useEffect(() => {
     window.ivstudio.prompts.status().then(setStatus).catch(() => setStatus(null))
@@ -99,19 +144,10 @@ export default function PromptWriter({ context, current, onWritten, notify, go, 
   }, [writeNow, idea, status])
 
   async function write() {
-    setBusy(true)
-    try {
-      const staged =
-        (board && stage?.people?.length ? `${idea.trim()}\nStaging (follow it exactly): ${stagingWords(stage)}\nCamera: ${cameraWords(stage)}.` : idea) +
-        (previsN ? `\n${previsWords(previs.stage, previsN)} Say so in the prompt, with these words.` : '')
-      const text = await window.ivstudio.prompts.write({ ...context, idea: staged })
-      setUndo(current || '')
-      onWritten(text)
-    } catch (err) {
-      notify(err.message)
-    } finally {
-      setBusy(false)
-    }
+    const staged =
+      (board && stage?.people?.length ? `${idea.trim()}\nStaging (follow it exactly): ${stagingWords(stage)}\nCamera: ${cameraWords(stage)}.` : idea) +
+      (previsN ? `\n${previsWords(previs.stage, previsN)} Say so in the prompt, with these words.` : '')
+    await run(() => window.ivstudio.prompts.write({ ...context, idea: staged }), (err) => notify(err.message))
   }
 
   return (
@@ -246,22 +282,18 @@ function StagePop({ stage, names, setStage, staged, previsN, drawing, canPrevis,
 }
 
 // A short story -> every shot of a sequence (the writer chosen in Settings; Context IR falls back to the local one).
-export function StoryWriter({ character, shotSeconds, existing, onShots, notify }) {
-  const [open, setOpen] = useState(false)
-  const [story, setStory] = useState('')
+// story + onStory: the story kept by the page; lastingKey + onLate as PromptWriter's (GitHub #40).
+export function StoryWriter({ character, shotSeconds, existing, onShots, notify, story: storyProp, onStory, lastingKey = null, onLate = null }) {
+  const [busy, run] = useLasting(lastingKey, onShots, onLate)
+  const [open, setOpen] = useState(() => !!storyProp || busy)
+  const [storyLocal, setStoryLocal] = useState('')
+  const story = storyProp ?? storyLocal
+  const setStory = onStory || setStoryLocal
   const [count, setCount] = useState(Math.max(2, existing || 3))
-  const [busy, setBusy] = useState(false)
 
   async function write() {
     if (existing && !(await ask({ title: 'Replace your shots?', message: 'The shots you have are replaced with new ones written from the story.', confirm: 'Write new shots', danger: true }))) return
-    setBusy(true)
-    try {
-      onShots(await window.ivstudio.prompts.story({ story, shots: count, seconds: shotSeconds, character }))
-    } catch (err) {
-      notify(err.message)
-    } finally {
-      setBusy(false)
-    }
+    await run(() => window.ivstudio.prompts.story({ story, shots: count, seconds: shotSeconds, character }), (err) => notify(err.message))
   }
 
   if (!open)

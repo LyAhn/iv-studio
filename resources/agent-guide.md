@@ -241,6 +241,13 @@ model or an OpenAI-compatible server), as do `write_film_script` and `break_down
 - `save_sequence` with shots (10 or 15 s each). `method: "take"` renders every shot in one seamless
   take (`render_take`); `method: "shots"` hunts and finishes shot by shot (`hunt_shot`, then
   `finish_shot`), each continuing from the last.
+- A one take is `takeKind: "plain"` (the default: the fl2va model, prompts sent as written, each shot
+  opening on the last frame of the one before) or `takeKind: "refs"` (the ref2va model, carrying the
+  character's face picture, up to 4 pictures of the same person in `refs.pictures`, a `voiceRef`, or
+  `refs.selfVoice` into every shot; needs at least one). In refs, IV Studio opens each shot with a line
+  naming the references and H3 Multishot adds the ref2va sections around it, so write shots the plain way.
+  `get_sequence` gives `take.model` and `take.script`: each shot exactly as it is sent. `startImage` is a
+  picture shot 1 opens on, either kind.
 - Join rules for every shot after the first: open holding the previous shot's closing pose, stay
   quiet about 2 s before anyone speaks, and end settled with about 2 s to spare.
   `write_shots_from_story` writes shots that follow them.

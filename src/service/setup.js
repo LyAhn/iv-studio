@@ -28,7 +28,7 @@ export function comboOptions(info, cls, input) {
 
 const base = (o) => o.replace(/\\/g, '/').split('/').pop()
 // Which workflows each model's pick in Settings → Models covers (plan.js: text, frames and continue run fl2va).
-const PICKS = { fl2va: ['text', 'frames', 'continue'], ref2va: ['reference', 'take', 'retake'] }
+const PICKS = { fl2va: ['text', 'frames', 'continue', 'takePlain'], ref2va: ['reference', 'take', 'retake'] }
 
 // The file this ComfyUI has for a model: IV Studio's own build (match, alt), else another version of the same
 // model (accept: patterns, like the fp8 or NVFP4 build ComfyUI's templates download), else the one picked in

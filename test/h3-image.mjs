@@ -42,8 +42,14 @@ check('generate: H3’s text encoder as type minimax', byType(g, 'CLIPLoader')[0
 const ks = byType(g, 'KSampler')[0]?.inputs
 check('generate: KSampler 6 steps, cfg 1, euler, simple', ks && ks.steps === 6 && ks.cfg === 1 && ks.sampler_name === 'euler' && ks.scheduler === 'simple')
 check('generate: the negative is zeroed (no CFG)', byType(g, 'ConditioningZeroOut').length === 1)
-check('generate: the latent comes from the conditioning, repeated for 2', byType(g, 'RepeatLatentBatch')[0]?.inputs.amount === 2)
-check('generate: decoded and saved', byType(g, 'VAEDecode').length === 1 && byType(g, 'SaveImage').length === 1)
+// GitHub #39: H3 Image's sampler refuses a batch, so 2 pictures are 2 samplers on their own seeds
+const kss = byType(g, 'KSampler')
+check('generate: no batch (H3 Image takes one picture at a time)', byType(g, 'RepeatLatentBatch').length === 0)
+check('generate: 2 pictures are 2 samplers on the conditioning’s latent', kss.length === 2 && kss.every((k) => Array.isArray(k.inputs.latent_image) && k.inputs.latent_image[1] === 1))
+check('generate: each on its own seed', kss[0]?.inputs.seed === 7 && kss[1]?.inputs.seed === 1007)
+check('generate: each decoded and saved', byType(g, 'VAEDecode').length === 2 && byType(g, 'SaveImage').length === 2)
+check('generate: one picture is one sampler', byType(imageGraph({ family: 'h3image', unet: 'u', te: 't', vae: 'v', prompt: 'p', width: 1024, height: 1024, count: 1, seed: 3, steps: 6, cfg: 1, prefix: 'x' }), 'KSampler').length === 1)
+check('generate: four is the most', byType(imageGraph({ family: 'h3image', unet: 'u', te: 't', vae: 'v', prompt: 'p', width: 1024, height: 1024, count: 9, seed: 3, steps: 6, cfg: 1, prefix: 'x' }), 'KSampler').length === 4)
 
 // the graph, edit with three pictures
 g = imageGraph({ family: 'h3image', mode: 'edit', unet: 'u', te: 't', vae: 'v', prompt: 'Put the jacket from <Picture 2> on her', width: 2048, height: 2048, seed: 1, steps: 6, cfg: 1, refs: ['a.png', 'b.png', 'c.png'], megapixels: 4, prefix: 'x' })
