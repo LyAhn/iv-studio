@@ -18,7 +18,7 @@ import { Cast, resolveMentions, withCast } from './cast.js'
 import { contextIrGraph, fromContextIr, writeHarness, writeLocal, writeStoryLocal } from './prompter.js'
 import { cleanSequenceLoras, MAX_REF_PICTURES, renderOutGraph, retakeGraph, SAVES, SEQUENCE_DEFAULTS, takeGraph, takeKindOf, takeReferences, takeScript, validateSequence } from './sequence.js'
 import { checkSetup, comboOptions, fileBase, modelFileMap, whyUnreached } from './setup.js'
-import { comfyPlace, installPacks, missingPacks, packsNeedingRuntime } from './nodepacks.js'
+import { comfyPlace, installPacks, missingPacks, packsNeedingRuntime, packsOutdated } from './nodepacks.js'
 import { checkUpdates, copySnapshot, MANAGER_PACK, packFolders, readRecord, reenable, restart, undo, update, writeRecord } from './comfyupdate.js'
 import { comfyUp, isDesktopLauncher, isLocalUrl } from './comfylauncher.js'
 import { finalFrom, finalGraph, graphProblems, NODES as SEEDANCE_NODES, planSeedance, SEEDANCE, seedanceGraph, seedanceMentions, sizeOf, takesFrom, FINAL_FROM_DRAFT } from './seedance.js'
@@ -291,6 +291,8 @@ export class Studio {
     // a pack whose nodes load but whose runtime was never downloaded (DLSS 5's VE_CLI.exe, GitHub #36)
     const place = await comfyPlace(this.comfy, folder).catch((err) => (packs.length ? Promise.reject(err) : null))
     if (place) for (const p of packsNeedingRuntime(this.manifest, place.customNodes, { linux })) if (!packs.includes(p)) packs.push(p)
+    // and IV Studio's own pack when this ComfyUI has an older copy of it
+    if (place) for (const p of packsOutdated(this.manifest, place.customNodes)) if (!packs.includes(p)) packs.push(p)
     if (!packs.length) return { results: [], restart: false }
     const results = await installPacks(packs, { ...place, resourcesDir: this.resourcesDir, onProgress })
     return { customNodes: place.customNodes, python: place.python, results, restart: results.some((r) => r.status === 'installed' || (r.status === 'skipped' && !r.runtime)) }
@@ -742,7 +744,7 @@ export class Studio {
     let prompt = buildPrompt(this.template, this.meta, plan.groups, plan.values)
     // live previews of each step (remote.js), on this PC only: the cloud has no websocket to send them over
     // (a finish shows its 2 MP pass, a little larger)
-    if (['previews', 'finish'].includes(kind) && this.livePreview !== false && !this.comfy.remote && (await this.capabilities()).livePreview) {
+    if (['previews', 'finish'].includes(kind) && this.livePreviewOn() && !this.comfy.remote && (await this.capabilities()).livePreview) {
       prompt = withLivePreview(prompt, kind === 'finish' ? { guiders: ['14', '26'], size: 640 } : {})
     }
     return this.submitGraph({ kind, graph: prompt, projectId: project.id, plan, name, parent, previewPlan })
@@ -766,6 +768,13 @@ export class Studio {
     return kind ? familyOf(kind) : 'other'
   }
 
+  // Whether renders carry step pictures: the window's Live preview switch (settings.livePreview), read at each
+  // render so the app and the MCP server follow it. They cost the GPU a little each step, so it's off by default.
+  // livePreview may be a boolean or a function; without one (tests, older callers) they're on, as before.
+  livePreviewOn() {
+    return typeof this.livePreview === 'function' ? !!this.livePreview() : this.livePreview !== false
+  }
+
   // Queues any graph and records it as a job. Sequence graphs carry plan.saves so their outputs can be read.
   async submitGraph({ kind, graph: built, projectId = null, sequenceId = null, plan, name, parent, previewPlan }) {
     const caps = await this.capabilities()
@@ -773,7 +782,7 @@ export class Studio {
     let graph = adaptGraph(built, plan?.finish?.enhancer === 'seedvr2' ? { ...caps, dlss: false, upscale2x: false, rife: false } : caps, { upscaleSize: plan?.resolved?.upscaleSize })
     // step pictures for the live preview from every kind of render that samples (shot hunts and finishes already
     // carry them), on this PC only: the cloud has no websocket to send them over
-    if (this.livePreview !== false && !this.comfy.remote && caps.previewNode) graph = withLivePreviewAll(graph, { tinyVaes: caps.tinyVaes, size: String(kind).startsWith('picture') ? 640 : 448 })
+    if (this.livePreviewOn() && !this.comfy.remote && caps.previewNode) graph = withLivePreviewAll(graph, { tinyVaes: caps.tinyVaes, size: String(kind).startsWith('picture') ? 640 : 448 })
     const problems = checkPrompt(graph)
     if (problems.length) throw new Error(`Internal graph error: ${problems.join('; ')}`)
     await this.makeRoom(kind)

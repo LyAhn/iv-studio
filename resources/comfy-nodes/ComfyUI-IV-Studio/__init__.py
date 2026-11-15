@@ -21,7 +21,27 @@ import folder_paths
 CACHE_DIR = "iv_latent_cache"
 
 
-def _ancestry(prompt, start_id):
+# Nodes that only watch the sampling and never change the result: the live preview (KJNodes' per-step pictures).
+# The fingerprint looks straight through them, so a take hunted with the live preview on can be finished with it off
+# (or at another preview size), and the other way round, without sampling it again.
+SEE_THROUGH = {"ModelPreviewOverrideKJ"}
+
+
+def _is_link(value):
+    return isinstance(value, list) and len(value) == 2 and isinstance(value[0], (str, int))
+
+
+def _through(prompt, link):
+    """The link a see-through node passes on (its model input), followed until a real node."""
+    for _ in range(64):
+        node = prompt.get(str(link[0]))
+        if not node or node.get("class_type") not in SEE_THROUGH or not _is_link(node.get("inputs", {}).get("model")):
+            return link
+        link = node["inputs"]["model"]
+    return link
+
+
+def _ancestry(prompt, start_id, see_through=True):
     """Every node upstream of start_id (inclusive), as {id: [class_type, inputs]}."""
     seen, todo = {}, [str(start_id)]
     while todo:
@@ -29,20 +49,32 @@ def _ancestry(prompt, start_id):
         if nid in seen or nid not in prompt:
             continue
         node = prompt[nid]
-        inputs = node.get("inputs", {})
+        inputs = dict(node.get("inputs", {}))
+        if see_through:
+            inputs = {k: (_through(prompt, v) if _is_link(v) else v) for k, v in inputs.items()}
         seen[nid] = [node.get("class_type"), inputs]
         for value in inputs.values():
-            if isinstance(value, list) and len(value) == 2 and isinstance(value[0], (str, int)):
+            if _is_link(value):
                 todo.append(str(value[0]))
     return seen
 
 
-def _fingerprint(prompt, unique_id):
+def _fingerprint(prompt, unique_id, see_through=True):
     link = prompt[str(unique_id)]["inputs"].get("samples")
     if not (isinstance(link, list) and len(link) == 2):
         return None
-    payload = {"source": [str(link[0]), link[1]], "graph": _ancestry(prompt, link[0])}
+    payload = {"source": [str(link[0]), link[1]], "graph": _ancestry(prompt, link[0], see_through)}
     return hashlib.sha256(json.dumps(payload, sort_keys=True, default=str).encode("utf-8")).hexdigest()[:32]
+
+
+def _cached(prompt, unique_id):
+    """The file this latent is cached in, if any: under today's fingerprint, else under the one versions 1-2 of this
+    pack gave it (which counted the live preview node), so takes cached before the update are still found."""
+    for see_through in (True, False):
+        key = _fingerprint(prompt, unique_id, see_through)
+        if key and os.path.isfile(_cache_path(key)):
+            return _cache_path(key)
+    return None
 
 
 def _cache_path(key):
@@ -97,8 +129,7 @@ class IVLatentCache:
         if samples is None:
             if not enabled or prompt is None:
                 return ["samples"]
-            key = _fingerprint(prompt, unique_id)
-            if key is None or not os.path.isfile(_cache_path(key)):
+            if _cached(prompt, unique_id) is None:
                 return ["samples"]
         return []
 
@@ -106,6 +137,7 @@ class IVLatentCache:
         key = _fingerprint(prompt, unique_id) if (enabled and prompt is not None) else None
         path = _cache_path(key) if key else None
         if samples is None:
+            path = _cached(prompt, unique_id) or path
             data = torch.load(path, map_location="cpu", weights_only=True)
             print(f"[IV Latent Cache] reused {os.path.basename(path)}")
             return (_unpack(data, comfy.model_management.intermediate_device()),)

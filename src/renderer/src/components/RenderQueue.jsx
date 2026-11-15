@@ -37,12 +37,19 @@ export default function RenderQueue({ remote, notify, open }) {
       return false
     }
   })
+  // The switch also decides whether renders send step pictures at all (settings.livePreview, which the app and
+  // the MCP server read at each render): they cost the GPU a little each step, so off means slightly faster renders.
   const setPipSaved = (on) => {
     setPip(on)
     try {
       localStorage.setItem('iv.livePreview', on ? 'on' : 'off')
     } catch {}
+    window.ivstudio.settings.set({ livePreview: on }).catch(() => {})
   }
+  // a switch left on before the setting existed turns the step pictures on too
+  useEffect(() => {
+    if (pip) window.ivstudio.settings.set({ livePreview: true }).catch(() => {})
+  }, [])
   useEffect(() => {
     let live = true
     const poll = () =>
@@ -75,7 +82,7 @@ export default function RenderQueue({ remote, notify, open }) {
   const waiting = items.length - running
   return (
     <div className={`render-queue ${items.length ? 'busy' : ''}`}>
-      <button className={`live-switch ${pip ? 'on' : ''}`} role="switch" aria-checked={pip} onClick={() => setPipSaved(!pip)} title={pip ? 'Hide the live preview' : 'Show what’s rendering in a corner of every page'}>
+      <button className={`live-switch ${pip ? 'on' : ''}`} role="switch" aria-checked={pip} onClick={() => setPipSaved(!pip)} title={pip ? 'Turn the live preview off: renders started from now on skip the step pictures. Takes you’ve already hunted still finish without rendering again.' : 'Show what’s rendering, step by step, in a corner of every page. Step pictures use a little GPU time each step, so renders can run slightly slower. Switching it on or off between hunting and finishing doesn’t lose your takes.'}>
         <span className="switch-track">
           <span className="switch-knob" />
         </span>

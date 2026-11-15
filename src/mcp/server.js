@@ -104,6 +104,8 @@ setLlmSource(() => {
   return { provider: s.promptEngine === 'openai' ? 'openai' : 'ollama', url: s.openaiUrl, model: s.openaiModel, vision: !!s.openaiVision, key: process.env.IV_STUDIO_LLM_KEY || process.env.OPENAI_API_KEY || '', headers }
 })
 const studio = new Studio({ dataDir: DATA, resourcesDir: resourcesDir(), comfyUrl: readSettings(BASE).comfyUrl, models: readSettings(BASE).models })
+// step pictures follow the window's Live preview switch
+studio.livePreview = () => !!readSettings(BASE).livePreview
 const server = new McpServer({ name: 'iv-studio', version: '0.1.0' }, { instructions: INSTRUCTIONS })
 // Where the app puts downloads and exports (Electron's videos folder; this process has no Electron app).
 const VIDEOS = () => videosFolderOf(readSettings(BASE), { incognito: INCOGNITO, dataDir: DATA, videos: path.join(process.env.USERPROFILE || os.homedir(), 'Videos') })

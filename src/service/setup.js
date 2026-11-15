@@ -122,8 +122,10 @@ export async function checkSetup({ comfy, template, manifest, characters, chosen
     }
     const core = pack.classes.some((c) => needed.includes(c))
     const outdated = pack.bundled && pack.version && customNodes?.some((d) => fs.existsSync(path.join(d, pack.dir)) && packVersion(path.join(d, pack.dir)) < pack.version)
-    if (miss.length && outdated) {
-      items.push({ id: `pack:${pack.label}`, label: pack.label, status: 'warn', detail: `A newer version comes with IV Studio (missing nodes: ${miss.join(', ')})`, fix: 'Install the missing node packs to update it, then restart ComfyUI.', kind: 'node_pack', for: pack.for, dir: pack.dir })
+    // an older copy of IV Studio's own pack: flagged even when its nodes all load (version 3 changed how the take
+    // cache reads the live preview, with no new nodes), so Install missing node packs updates it
+    if (outdated) {
+      items.push({ id: `pack:${pack.label}`, label: pack.label, status: 'warn', detail: miss.length ? `A newer version comes with IV Studio (missing nodes: ${miss.join(', ')})` : 'A newer version comes with IV Studio.', fix: 'Install the missing node packs to update it, then restart ComfyUI.', kind: 'node_pack', for: pack.for, dir: pack.dir })
       continue
     }
     if (miss.length && onDisk(pack.dir)) {

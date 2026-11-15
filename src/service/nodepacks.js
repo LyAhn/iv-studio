@@ -35,6 +35,12 @@ export function packsNeedingRuntime(manifest, customNodes, { linux = false } = {
   return manifest.node_packs.filter((p) => p.runtime && !(linux && p.windowsOnly) && !(!linux && p.linuxOnly) && fs.existsSync(path.join(customNodes, p.dir)) && !runtimeReady(path.join(customNodes, p.dir), p.runtime))
 }
 
+// IV Studio's own pack(s) where the copy in custom_nodes is older than the one IV Studio carries, even when every
+// node loads (version 3 changed how the take cache reads the live preview, with no new nodes).
+export function packsOutdated(manifest, customNodes) {
+  return manifest.node_packs.filter((p) => p.bundled && p.version && fs.existsSync(path.join(customNodes, p.dir)) && packVersion(path.join(customNodes, p.dir)) < p.version)
+}
+
 // The Python that runs ComfyUI, next to it: the portable build's python_embeded, a venv, or ComfyUI Desktop's .venv.
 export function findPython(comfyRoot, platform = process.platform) {
   const win = platform === 'win32'

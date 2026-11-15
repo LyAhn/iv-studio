@@ -1648,7 +1648,7 @@
       ],
       "dir": "ComfyUI-IV-Studio",
       "bundled": "comfy-nodes/ComfyUI-IV-Studio",
-      "version": 2,
+      "version": 3,
       "url": "https://github.com/hollisorg/iv-studio/tree/main/resources/comfy-nodes/ComfyUI-IV-Studio",
       "for": "Shots"
     },

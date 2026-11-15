@@ -7,7 +7,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
-import { findPython, installPacks, missingPacks, packsNeedingRuntime, requirementsFor, runtimeReady } from '../src/service/nodepacks.js'
+import { findPython, installPacks, missingPacks, packsNeedingRuntime, packsOutdated, requirementsFor, runtimeReady } from '../src/service/nodepacks.js'
 import { explainRenderError } from '../src/service/studio.js'
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -115,6 +115,22 @@ try {
     const [r2] = await installPacks([dlss], { customNodes, python: null, resourcesDir: path.join(ROOT, 'resources') })
     assert.equal(r2.runtime, 'failed')
     assert.match(r2.runtimeDetail, /install\.py/)
+  })
+
+  await ok("an older copy of IV Studio's own pack is updated even when every node loads", async () => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'resources', 'models.json'), 'utf8'))
+    const own = manifest.node_packs.find((p) => p.dir === 'ComfyUI-IV-Studio')
+    const customNodes = path.join(tmp, 'outdated')
+    const dir = path.join(customNodes, own.dir)
+    fs.mkdirSync(dir, { recursive: true })
+    fs.writeFileSync(path.join(dir, 'VERSION'), String(own.version - 1))
+    fs.writeFileSync(path.join(dir, '__init__.py'), '# old')
+    assert.deepEqual(packsOutdated(manifest, customNodes).map((p) => p.dir), ['ComfyUI-IV-Studio'])
+    const [r] = await installPacks([own], { customNodes, python: null, resourcesDir: path.join(ROOT, 'resources') })
+    assert.equal(r.status, 'installed')
+    assert.equal(fs.readFileSync(path.join(dir, 'VERSION'), 'utf8').trim(), String(own.version))
+    assert.match(fs.readFileSync(path.join(dir, '__init__.py'), 'utf8'), /SEE_THROUGH/)
+    assert.deepEqual(packsOutdated(manifest, customNodes), [])
   })
 
   await ok('the VE_CLI.exe render error says what to press', () => {

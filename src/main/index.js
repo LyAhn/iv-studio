@@ -303,6 +303,7 @@ function makeStudio() {
       ? { comfyUrl: s.cloud.url, comfyToken: unseal(s.cloudToken) }
       : { comfyUrl: s.comfyUrl }
   studio = new Studio({ dataDir: DATA, resourcesDir: resourcesDir(path.join(app.getAppPath(), 'resources')), models: s.models, ...cloud })
+  studio.livePreview = () => !!readSettings(BASE).livePreview
   if (onRunPod) studio.comfy.waker = () => runpodWake?.()
   // the person's own cloud: model lists without a GPU, and a render's models and LoRAs put there first (cloudprep.js)
   if (s.target === 'cloud' && (onRunPod || ((s.cloudProvider || 'modal') === 'modal' && s.cloud?.url))) {
