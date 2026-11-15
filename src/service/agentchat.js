@@ -2,6 +2,7 @@
 // like adding IV Studio to Claude Desktop or Codex as an MCP server, but in the app. Every IV Studio tool, nothing
 // else; anything that deletes, costs money, installs or changes Settings waits for the person's Allow (server.js
 // askPerson, chatAsk). One headless turn per message, continuing the agent's own session.
+import { ivMemoryNote } from './iv-memory-note.js'
 import fs from 'node:fs'
 import path from 'node:path'
 import { AGENT_NAMES, SERVER, claudeArgs, codexChatArgs, killTree, parseLine, spawnAgent, stepLabel } from './agentrun.js'
@@ -159,7 +160,9 @@ export function startChatTurn({ engine, exe, dir, session = null, message, conte
   fs.writeFileSync(jobsFile, '')
   const env = { ...mcp.env, ...extraEnv, IV_STUDIO_AGENT_RUN: 'chat', IV_STUDIO_AGENT_JOBS: jobsFile, IV_STUDIO_AGENT_ASK: askDir }
   const server = { command: mcp.command, args: mcp.args, env }
-  const text = `${context ? `${contextLine(context)}\n` : ''}${message}`
+  // What the person's IV apps know about them (and this business), kept in IV Hivemind.
+  const remembered = ivMemoryNote({ app: 'studio', localId: '' })
+  const text = `${context ? `${contextLine(context)}\n` : ''}${remembered ? `${remembered}\n` : ''}${message}`
   let args
   let input
   if (engine === 'claude') {
