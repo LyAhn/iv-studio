@@ -3237,6 +3237,57 @@ body.resizing * {
   -webkit-user-drag: none;
 }
 
+/* the logo is also the Hivemind button: no box, just a soft glow in the accent colour that breathes slowly
+   and brightens on hover; off (plain logo) in Incognito, steady with reduced motion */
+.ivw-launch-logo {
+  -webkit-app-region: no-drag;
+  display: grid;
+  place-items: center;
+  padding: 3px 4px;
+  margin: -3px -4px;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  filter: drop-shadow(0 0 3px rgba(var(--accent-rgb), 0.55));
+  animation: ivw-logo-glow 3.2s ease-in-out infinite;
+  transition: transform 0.15s ease;
+}
+.ivw-launch-logo:hover:not(:disabled) {
+  animation: none;
+  filter: drop-shadow(0 0 5px rgba(var(--accent-rgb), 1)) drop-shadow(0 0 14px rgba(var(--accent-rgb), 0.6));
+  transform: scale(1.06);
+}
+.ivw-launch-logo:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.ivw-launch-logo:focus-visible {
+  outline: 2px solid rgba(var(--accent-rgb), 0.9);
+  outline-offset: 2px;
+}
+.ivw-launch-logo:disabled {
+  cursor: default;
+  animation: none;
+  filter: none;
+}
+@keyframes ivw-logo-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 3px rgba(var(--accent-rgb), 0.45));
+  }
+  50% {
+    filter: drop-shadow(0 0 5px rgba(var(--accent-rgb), 0.9)) drop-shadow(0 0 11px rgba(var(--accent-rgb), 0.4));
+  }
+}
+:root.rm .ivw-launch-logo {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ivw-launch-logo {
+    animation: none;
+  }
+}
+
 /* Incognito: the title bar's switch, and the eye art closed while it's on */
 .incognito-switch {
   margin-left: auto;

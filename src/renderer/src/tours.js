@@ -32,6 +32,7 @@ export const TOURS = {
   home: {
     title: 'The Dashboard',
     steps: [
+      { at: '.ivw-launch-logo', title: 'Hivemind', text: 'Click the IV logo to open Hivemind. Open a creative brief from Outreach with its business context attached. Prepare your project here, then hand selected finished files and a caption to Signal as an unapproved draft.' },
       { title: 'Welcome to IV Studio', text: 'Everything here runs on your own ComfyUI with MiniMax H3: shots with sound, pictures, voices, music and films. This tour takes a minute.' },
       { at: '.quick-cards', title: 'Start something', text: 'Each card opens the right page ready to go: a new shot, a picture, a short film, an edit, a song, a voice line and more.' },
       { at: '.dash-recent', title: 'Your latest work', text: 'The newest things you made. Click one to watch it and step through its versions.' },

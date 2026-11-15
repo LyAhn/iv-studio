@@ -1,3 +1,5 @@
+import { workspaceHost } from '../service/iv-workspace-host.js'
+import { receiveStudio } from '../service/iv-workspace-import.js'
 import { isHarness } from '../service/harness.js'
 import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, powerSaveBlocker, protocol, safeStorage, screen, shell } from 'electron'
 import fs from 'node:fs'
@@ -144,6 +146,9 @@ const BASE = LOCATION.missing ? LOCATION.defaultDir : LOCATION.dir
 setOllamaSource(() => readSettings(BASE).ollamaUrl)
 const INCOGNITO = !!readSettings(BASE).incognito
 const DATA = INCOGNITO ? incognitoDir(BASE) : BASE
+let ivWorkspace
+let pendingWorkspaceArgs = process.argv
+app.on('open-url',(event,url)=>{event.preventDefault();pendingWorkspaceArgs=[url];ivWorkspace?.capture([url])})
 // Downloads and exports: Videos\IV Studio, or a folder inside the Incognito data
 const videosDir = () => videosFolderOf(readSettings(BASE), { incognito: INCOGNITO, dataDir: DATA, videos: app.getPath('videos') })
 let win = null
@@ -1168,6 +1173,9 @@ app.whenReady().then(() => {
   handle('editgen:cancel', (id, genId) => editgen.cancel(id, genId))
   // ---------- Projects (a short film from script to rough cut) ----------
   const productions = new Productions({ dataDir: DATA, studio: () => studio, voices: () => voices, images: () => images, previs: () => previs, catalog: () => catalog, edits, localCopy, onChange: (id) => send('productions:changed', { id }), model: () => readSettings(BASE).ollamaModel || undefined, writer: () => writerOf(readSettings(BASE)) })
+  ivWorkspace = workspaceHost({appId:'studio',dataDir:DATA,disabled:INCOGNITO,receive:(h,w)=>receiveStudio(h,w,productions)})
+  ivWorkspace.capture(pendingWorkspaceArgs);ivWorkspace.ready()
+  handle('workspace:call',(method,args)=>{if(!Object.hasOwn(ivWorkspace.api,method))throw Error('Unknown workspace action.');return ivWorkspace.api[method](args||{})})
   handle('productions:list', () => productions.list())
   handle('productions:get', (id) => productions.view(id))
   handle('productions:create', (opts) => productions.create(opts))
@@ -3075,7 +3083,8 @@ app.whenReady().then(() => {
     comfyUp(boot.comfyUrl).then((up) => up || startComfy().catch(() => {}))
 })
 
-app.on('second-instance', () => {
+app.on('second-instance', (_event,args) => {
+  pendingWorkspaceArgs=args;ivWorkspace?.capture(args)
   if (win) {
     if (win.isMinimized()) win.restore()
     win.focus()

@@ -1,7 +1,7 @@
 {
   "name": "iv-studio",
   "productName": "IV Studio",
-  "version": "1.1.11",
+  "version": "1.1.14",
   "description": "Infinite Variance studio for MiniMax H3: hunt previews, pick one, finish at 2 MP with DLSS. Built on ComfyUI, with an MCP server for agents.",
   "author": "Infinite Variance",
   "license": "MIT",
@@ -32,7 +32,7 @@
     "@fontsource/dm-sans": "5.3.0",
     "@fontsource/jetbrains-mono": "5.3.0",
     "@vitejs/plugin-react": "6.1.2",
-    "electron": "44.9.0",
+    "electron": "44.9.1",
     "electron-builder": "26.15.3",
     "electron-vite": "6.0.0",
     "react": "19.3.1",
@@ -122,6 +122,14 @@
     },
     "dmg": {
       "title": "IV Studio"
-    }
+    },
+    "protocols": [
+      {
+        "name": "Hivemind handoff",
+        "schemes": [
+          "iv-studio"
+        ]
+      }
+    ]
   }
 }
