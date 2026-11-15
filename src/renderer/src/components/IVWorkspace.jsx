@@ -6,7 +6,9 @@ import { HivemindMark, HivemindLoading, handoffBeat } from './HivemindMark'
 const NAMES = { outreach: 'IV Outreach', studio: 'IV Studio', signal: 'IV Signal' }
 const EMPTY = { name: '', website: '', offer: '', audience: '', voice: '', visual: '', location: '', goal: '', accent: '#bb2349', logo: null }
 
-export default function IVWorkspace({ api, appId, nativeId, nativeName, onOpen, projectId, disabled = false }) {
+// launcher: what to show instead of the red Hivemind button (IV Studio passes its title-bar logo, which then
+// glows softly and opens Hivemind when clicked).
+export default function IVWorkspace({ api, appId, nativeId, nativeName, onOpen, projectId, disabled = false, launcher = null }) {
   const [open, setOpen] = useState(false), [state, setState] = useState(null), [tab, setTab] = useState('work')
   const [selected, setSelected] = useState(null), [editing, setEditing] = useState(null)
   const [caption, setCaption] = useState(''), [channel, setChannel] = useState('linkedin'), [assets, setAssets] = useState([])
@@ -67,7 +69,9 @@ export default function IVWorkspace({ api, appId, nativeId, nativeName, onOpen, 
     }).catch(e => setError(e.message))
   }
   return <>
-    <button type="button" className="ivw-launch" onClick={showWorkspace} disabled={disabled} title={disabled ? 'Shared workspace is off in Incognito' : 'Continue across your IV apps'}><HivemindMark size="small"/><span>Hivemind</span></button>
+    {launcher
+      ? <button type="button" className="ivw-launch-logo" onClick={showWorkspace} disabled={disabled} aria-label="Open Hivemind" title={disabled ? 'Hivemind is off in Incognito' : `Hivemind: continue across your IV apps`}>{launcher}</button>
+      : <button type="button" className="ivw-launch" onClick={showWorkspace} disabled={disabled} title={disabled ? 'Shared workspace is off in Incognito' : 'Continue across your IV apps'}><HivemindMark size="small"/><span>Hivemind</span></button>}
     <HivemindLoading label={transition}/>
     {open && createPortal(<div className="ivw-backdrop" onMouseDown={e => { if (e.target === e.currentTarget && !busy) setOpen(false) }}>
       <section className="ivw-panel" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="ivw-title">

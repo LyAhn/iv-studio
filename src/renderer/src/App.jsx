@@ -474,10 +474,10 @@ export default function App() {
   return (
     <div className={`app ${incognito ? 'incognito' : ''} ${focus && page === 'edit' ? 'app-focus' : ''} ${info?.platform === 'darwin' ? 'mac' : ''} ${chatOpen && !chatPopped ? 'chat-on' : ''}`}>
       <header className="titlebar">
-        <img className="brand-logo" src={incognito ? ivMarkClosed : ivMark} alt="Infinite Variance" />
+        {/* the IV logo is the Hivemind button: it glows softly and opens Hivemind when clicked */}
+        <IVWorkspace api={ivWorkspaceApi} appId="studio" disabled={incognito} projectId={productionId} launcher={<img className="brand-logo" src={incognito ? ivMarkClosed : ivMark} alt="Infinite Variance" />} onOpen={r=>{if(r.kind==='production'){setWelcome(null);openProject(r.id)}}} />
         <span className="mono brand-text">Infinite Variance</span>
         <span className="mono dim brand-text">/ Studio</span>
-        <IVWorkspace api={ivWorkspaceApi} appId="studio" disabled={incognito} projectId={productionId} onOpen={r=>{if(r.kind==='production'){setWelcome(null);openProject(r.id)}}} />
         {info?.testCopy && (
           <span className="mono test-copy">
             Test copy<span className="test-copy-more"> · separate data</span>
