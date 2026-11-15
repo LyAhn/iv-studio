@@ -161,7 +161,7 @@ export function startChatTurn({ engine, exe, dir, session = null, message, conte
   const env = { ...mcp.env, ...extraEnv, IV_STUDIO_AGENT_RUN: 'chat', IV_STUDIO_AGENT_JOBS: jobsFile, IV_STUDIO_AGENT_ASK: askDir }
   const server = { command: mcp.command, args: mcp.args, env }
   // What the person's IV apps know about them (and this business), kept in IV Hivemind.
-  const remembered = ivMemoryNote({ app: 'studio', localId: '' })
+  const remembered = ivMemoryNote({ app: 'studio', useActive: true })
   const text = `${context ? `${contextLine(context)}\n` : ''}${remembered ? `${remembered}\n` : ''}${message}`
   let args
   let input
