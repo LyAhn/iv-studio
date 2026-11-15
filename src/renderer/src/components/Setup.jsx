@@ -20,7 +20,7 @@ const VIEW_KEY = 'iv.setupView'
 // Optional models, by the part of IV Studio that uses them (models.json optionalFor), each with what it does and
 // where to find it (GitHub #21: a title alone wasn't enough to decide). First match wins, so the order matters.
 const AREAS = [
-  ['Live preview', /live step/i, 'The Live preview switch above the queue', 'Step-by-step pictures of a shot while it renders (a tiny H3 decoder, 0.1 GB).'],
+  ['Live preview', /live step/i, 'The Live preview switch above the queue', 'Sharper step-by-step pictures of H3 shots and sequences while they render (a tiny H3 decoder, 0.1 GB). Without it, they show ComfyUI’s rougher colour preview.'],
   ['LTX 2.5 shots', /ltx 2\.5 shots/i, 'Create → Video → LTX 2.5, and a film\'s Video setting in Projects', 'A second video model on this PC: quicker takes with sound, good for cartoons and animation. Uses the LTX-2.5 files from Video effects, plus its 2× upscaler (1 GB) for finishing.'],
   ['Refine faces', /refine faces/i, 'Shots → a finished version → Enhance → Refine faces', 'Finds the face in a finished shot so H3 can redraw it at full size, matched to the character. Best on wide shots with small faces. Also needs the H3 FaceRefine node pack (Node packs above).'],
   ['Picture tools', /relight|remove background|depth maps/i, 'Create → Image → Tools', 'Relight a picture, remove the background of a picture or a video clip (also in the editor), and make depth and normal maps.'],

@@ -5,7 +5,8 @@ import { join, resolve } from 'node:path'
 import { APPS, IVWorkspace, cleanBrand, fingerprint, handoffArgument } from './iv-workspace.js'
 
 // Where people get IV Hivemind, and where it installs (per user, the standard folder).
-export const HIVEMIND_PAGE = 'https://infinitevariance.ai/downloads'
+// IV Hivemind's public download page: its newest release (installer and self-updates), hollisorg/iv-hivemind-releases
+export const HIVEMIND_PAGE = 'https://github.com/hollisorg/iv-hivemind-releases/releases/latest'
 const hivemindExe = () => process.env.IV_HIVEMIND_EXE || join(app.getPath('appData'), '..', 'Local', 'Programs', 'IV Hivemind', 'IV Hivemind.exe')
 
 // Main-process adapter. No renderer-selected executable, shell command or file path.

@@ -13,7 +13,7 @@ import { probe } from './media.js'
 import { buildPrompt, checkPrompt } from './graph.js'
 import { planFinish, planPreviews } from './plan.js'
 import { applyFinishSpeed, applySpeed } from './speed.js'
-import { adaptGraph, capabilities, LIVE_NODE, withLivePreview } from './remote.js'
+import { adaptGraph, capabilities, LIVE_NODE, withLivePreview, withLivePreviewAll } from './remote.js'
 import { Cast, resolveMentions, withCast } from './cast.js'
 import { contextIrGraph, fromContextIr, writeHarness, writeLocal, writeStoryLocal } from './prompter.js'
 import { cleanSequenceLoras, MAX_REF_PICTURES, renderOutGraph, retakeGraph, SAVES, SEQUENCE_DEFAULTS, takeGraph, takeKindOf, takeReferences, takeScript, validateSequence } from './sequence.js'
@@ -770,7 +770,10 @@ export class Studio {
   async submitGraph({ kind, graph: built, projectId = null, sequenceId = null, plan, name, parent, previewPlan }) {
     const caps = await this.capabilities()
     // a finish SeedVR2 will enhance skips DLSS 5 (remote.js swaps its node for a plain save, as on the cloud)
-    const graph = adaptGraph(built, plan?.finish?.enhancer === 'seedvr2' ? { ...caps, dlss: false, upscale2x: false, rife: false } : caps, { upscaleSize: plan?.resolved?.upscaleSize })
+    let graph = adaptGraph(built, plan?.finish?.enhancer === 'seedvr2' ? { ...caps, dlss: false, upscale2x: false, rife: false } : caps, { upscaleSize: plan?.resolved?.upscaleSize })
+    // step pictures for the live preview from every kind of render that samples (shot hunts and finishes already
+    // carry them), on this PC only: the cloud has no websocket to send them over
+    if (this.livePreview !== false && !this.comfy.remote && caps.previewNode) graph = withLivePreviewAll(graph, { tinyVaes: caps.tinyVaes, size: String(kind).startsWith('picture') ? 640 : 448 })
     const problems = checkPrompt(graph)
     if (problems.length) throw new Error(`Internal graph error: ${problems.join('; ')}`)
     await this.makeRoom(kind)
@@ -1607,8 +1610,8 @@ export class Studio {
         state,
         position: n + 1,
         ours: !!ours,
-        // whether this prompt sends step pictures (withLivePreview added its node): not in the cloud, and not
-        // without H3's small preview model (taeh3) on this PC
+        // whether this prompt sends step pictures (withLivePreview or withLivePreviewAll added its node): not in
+        // the cloud, and not without KJNodes' preview node on this PC
         live: !!i[2]?.[LIVE_NODE],
         jobId: job?.id || null,
         kind: job?.kind || ours?.kind || null,

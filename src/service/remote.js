@@ -24,7 +24,10 @@ export function capabilities(objectInfo, systemStats) {
     // ComfyUI 0.44+ has the H3 latent upscaler built in (the same LBH weights, from models/latent_upscale_models)
     coreUpscaler: !!(objectInfo.MiniMaxH3LatentUpscaleWithModel && objectInfo.LatentUpscaleModelLoader),
     // KJNodes' per-step preview with H3's tiny VAE (models/vae_approx/taeh3.safetensors), for live previews
-    livePreview: comboOptions(objectInfo.ModelPreviewOverrideKJ?.input?.optional?.tiny_vae).includes(LIVE_TAE)
+    livePreview: comboOptions(objectInfo.ModelPreviewOverrideKJ?.input?.optional?.tiny_vae).includes(LIVE_TAE),
+    // the same node for everything else (sequences, pictures, Replace, effects...), with whichever tiny VAEs there are
+    previewNode: !!objectInfo.ModelPreviewOverrideKJ,
+    tinyVaes: comboOptions(objectInfo.ModelPreviewOverrideKJ?.input?.optional?.tiny_vae)
   }
 }
 const comboOptions = (spec) => (Array.isArray(spec?.[0]) ? spec[0] : spec?.[1]?.options) || []
@@ -44,6 +47,43 @@ export function withLivePreview(graph, { guiders = ['14'], size = 448 } = {}) {
   const model = g[present[0]].inputs.model
   g[LIVE_NODE] = { class_type: 'ModelPreviewOverrideKJ', inputs: { model, max_resolution: size, jpeg_quality: 72, suppress_default_preview: true, preview_frames: 1, preview_fps: 12, tiny_vae: LIVE_TAE } }
   for (const id of present) if (JSON.stringify(g[id].inputs.model) === JSON.stringify(model)) g[id].inputs.model = [LIVE_NODE, 0]
+  return g
+}
+
+// Live previews for any other graph (sequences' one takes and retakes, pictures, Replace and Remake, effects,
+// reframes, LTX shots...): the model of every node that samples is wrapped, one preview node per distinct model.
+// The step pictures use a tiny VAE that matches the model when there is one (taeh3 for H3 video, taesdxl for
+// SDXL), else ComfyUI's own latent-to-colour preview, rougher but enough to see the picture take shape.
+const SAMPLES = /^(BasicGuider|CFGGuider|DualCFGGuider|LTXVDualCFGGuider|KSampler|KSamplerAdvanced|SamplerCustom|H3MultishotSampler|H3Retake)$/
+export function withLivePreviewAll(graph, { tinyVaes = [], size = 448 } = {}) {
+  const g = structuredClone(graph)
+  if (Object.keys(g).some((k) => k.startsWith(LIVE_NODE))) return g
+  const tinyFor = (link) => {
+    // follow the model back through LoRAs and patches to the file it was loaded from
+    for (let at = link, n = 0; isLink(at) && n < 40; n++) {
+      const node = g[at[0]]
+      if (!node) break
+      const c = node.class_type
+      if (c === 'UNETLoader' || c === 'UnetLoaderGGUF') {
+        const name = String(node.inputs.unet_name || '')
+        return /h3|minimax/i.test(name) && !/image/i.test(name) && tinyVaes.includes(LIVE_TAE) ? LIVE_TAE : 'none'
+      }
+      if (c === 'CheckpointLoaderSimple') return tinyVaes.includes('taesdxl_decoder.safetensors') ? 'taesdxl_decoder.safetensors' : 'none'
+      at = node.inputs.model
+    }
+    return 'none'
+  }
+  const wrapped = new Map() // the model link, as JSON -> its preview node
+  for (const [id, node] of Object.entries(g)) {
+    if (!SAMPLES.test(node.class_type) || !isLink(node.inputs?.model)) continue
+    const key = JSON.stringify(node.inputs.model)
+    if (!wrapped.has(key)) {
+      const name = wrapped.size ? `${LIVE_NODE}_${wrapped.size + 1}` : LIVE_NODE
+      g[name] = { class_type: 'ModelPreviewOverrideKJ', inputs: { model: node.inputs.model, max_resolution: size, jpeg_quality: 72, suppress_default_preview: true, preview_frames: 1, preview_fps: 12, tiny_vae: tinyFor(node.inputs.model) } }
+      wrapped.set(key, name)
+    }
+    g[id].inputs.model = [wrapped.get(key), 0]
+  }
   return g
 }
 
