@@ -2,6 +2,16 @@
 // version's once, until it's dismissed; Settings → Updates lists the last few versions'.
 export const NEWS = [
   {
+    version: '1.1.15',
+    items: [
+      { text: 'IV Hivemind: click the IV logo at the top left to open it. IV Studio knows the profile you picked in Hivemind, its chat reads your IV memory, and work can be handed between IV Studio, IV Outreach and IV Signal.' },
+      { text: 'Live preview for everything that renders on your PC: shots, sequences, pictures, effects and more. Turning it on or off between hunting and finishing doesn’t lose your takes.' },
+      { text: 'Sequences: One take is Plain by default (it plays your shots as written), or With references (a face picture, more pictures of the person, and a voice sample or shot 1’s own voice). Shot 1 can start from a picture.' },
+      { text: 'Sequences: Write it for me keeps going if you leave the page, and your ideas and story are saved.' },
+      { text: 'Fixed: MiniMax H3 Image could only make one picture at a time, and a deleted sequence stayed on the Dashboard and in the Library.' }
+    ]
+  },
+  {
     version: '1.1.11',
     items: [
       { text: 'LTX 2.5, a second video model on your PC: pick it in Create → Video beside MiniMax H3. Quick takes with sound, good for cartoons and animation, from words or a first frame, 2 to 20 seconds.' },
