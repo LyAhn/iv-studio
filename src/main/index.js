@@ -41,7 +41,7 @@ import { initUpdater, updateState, MANUAL as UPDATE_MANUAL } from './updater'
 import { MediaTools } from '../service/media'
 import ffmpegStatic from 'ffmpeg-ffprobe-static'
 import { ModelInstaller, hfLoginFrom, setSavedHfToken } from '../service/models'
-import { CONTEXT_IR_PRICE, localChat, localWriterModel, normalizeOllamaUrl, ollamaStatus, pullModel, setOllamaSource, unloadOllama } from '../service/prompter'
+import { CONTEXT_IR_PRICE, localChat, localWriterModel, normalizeOllamaUrl, ollamaExe, ollamaIsLocal, ollamaStatus, pullModel, setOllamaSource, unloadOllama } from '../service/prompter'
 import { normalizeApiBase, openaiStatus, parseHeaders, setLlmSource } from '../service/llm'
 import { loadSlate, lookbook, promptVariants, rewritePrompt, writerName } from '../service/filmcraft'
 import { Studio } from '../service/studio'
@@ -1998,7 +1998,7 @@ app.whenReady().then(() => {
     // you and your agent (Settings → You and your agent)
     if (typeof agentName === 'string') patch.agentName = agentName.trim().slice(0, 40)
     if (typeof userName === 'string') patch.userName = userName.trim().slice(0, 40)
-    if (['claude', 'codex', 'hermes'].includes(chatEngine)) patch.chatEngine = chatEngine
+    if (['claude', 'codex', 'hermes', 'local'].includes(chatEngine)) patch.chatEngine = chatEngine
     if (typeof plainWords === 'boolean') patch.plainWords = plainWords
     if (typeof highContrast === 'boolean') patch.highContrast = highContrast
     if (['new', 'some', 'lots'].includes(aiLevel)) patch.aiLevel = aiLevel
@@ -2434,15 +2434,17 @@ app.whenReady().then(() => {
   let chatPoll = null
   // Hermes (hermesacp.js) joins the chat only: the prompt writer and Dashboard ideas stay with Claude Code and Codex.
   // A test copy can stand in a Hermes ACP server too (IV_STUDIO_TEST_HERMES: a command line).
+  // Local AI (localchat.js): Ollama on this PC, or an Ollama elsewhere set in Settings → Prompt writer
+  const localFound = () => ollamaExe() || (!ollamaIsLocal() ? 'remote' : null)
   const chatFound = () => {
-    if (TEST_COPY && process.env.IV_STUDIO_TEST_CHAT) return { claude: process.env.IV_STUDIO_TEST_CHAT, codex: null, hermes: process.env.IV_STUDIO_TEST_HERMES || null }
+    if (TEST_COPY && process.env.IV_STUDIO_TEST_CHAT) return { claude: process.env.IV_STUDIO_TEST_CHAT, codex: null, hermes: process.env.IV_STUDIO_TEST_HERMES || null, local: localFound() }
     const { env, home } = agentHome()
-    return { ...agentsFound(), hermes: (TEST_COPY && process.env.IV_STUDIO_TEST_HERMES) || findHermes(env, home) }
+    return { ...agentsFound(), hermes: (TEST_COPY && process.env.IV_STUDIO_TEST_HERMES) || findHermes(env, home), local: localFound() }
   }
   const chatPreferred = (found) => {
     const s = readSettings(BASE)
-    if (['claude', 'codex', 'hermes'].includes(s.chatEngine) && found[s.chatEngine]) return s.chatEngine
-    return ['claude', 'codex'].includes(s.promptEngine) && found[s.promptEngine] ? s.promptEngine : found.claude ? 'claude' : found.codex ? 'codex' : found.hermes ? 'hermes' : null
+    if (['claude', 'codex', 'hermes', 'local'].includes(s.chatEngine) && found[s.chatEngine]) return s.chatEngine
+    return ['claude', 'codex'].includes(s.promptEngine) && found[s.promptEngine] ? s.promptEngine : found.claude ? 'claude' : found.codex ? 'codex' : found.hermes ? 'hermes' : found.local ? 'local' : null
   }
   // The spending limit (spending.js): the chat's MCP server asks this desk before a paid step, and borrows the
   // Comfy.org key from it, with a token that only lives as long as one chat turn.
@@ -2489,14 +2491,14 @@ app.whenReady().then(() => {
   const chatEngine = (engine) => {
     const found = chatFound()
     const e = engine || chatPreferred(found)
-    if (!e || !AGENT_NAMES[e]) throw new Error('Install Claude Code, Codex or Hermes first: the chat uses your own.')
+    if (!e || !AGENT_NAMES[e]) throw new Error('Install Claude Code, Codex, Hermes or Ollama (for Local AI) first: the chat uses your own.')
     if (!found[e]) throw new Error(`${AGENT_NAMES[e]} isn't installed on this PC.`)
     return e
   }
   handle('chat:status', () => {
     const found = chatFound()
     const s = readSettings(BASE)
-    return { installed: { claude: !!found.claude, codex: !!found.codex, hermes: !!found.hermes }, preferred: chatPreferred(found), chat: chatView(), chats: listChats(chatsRoot).slice(0, 20), agentName: (s.agentName || '').trim(), userName: (s.userName || '').trim() }
+    return { installed: { claude: !!found.claude, codex: !!found.codex, hermes: !!found.hermes, local: !!found.local }, localModel: s.localChatModel || s.ollamaModel || '', preferred: chatPreferred(found), chat: chatView(), chats: listChats(chatsRoot).slice(0, 20), agentName: (s.agentName || '').trim(), userName: (s.userName || '').trim() }
   })
   handle('chat:new', (engine) => {
     if (chatTurn) throw new Error(`${chat.name} is still answering. Stop it first.`)
@@ -2572,7 +2574,9 @@ app.whenReady().then(() => {
       message: withAttachments(message, attached),
       context: fullContext,
       mcp: mcpCommand(),
-      model: current.engine === 'claude' ? s.claudeModel || '' : current.engine === 'codex' ? s.codexModel || '' : s.hermesModel || '',
+      model: current.engine === 'claude' ? s.claudeModel || '' : current.engine === 'codex' ? s.codexModel || '' : current.engine === 'local' ? s.localChatModel || s.ollamaModel || '' : s.hermesModel || '',
+      // Local AI answers from the CPU while ComfyUI renders, so the render keeps the graphics card
+      cpu: (fullContext.renders || []).some((r) => r.state === 'running'),
       names: { agentName: s.agentName, userName: s.userName },
       extraEnv,
       onEvent: (e) => {

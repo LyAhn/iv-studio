@@ -139,11 +139,13 @@ function WordsCard({ n, settings, setSettings }) {
 }
 
 // You and your agent: the person's name and the name they gave their agent (both shown in the chat and told to the
-// agent: agentchat.js namesNote), and which app the agent runs on (chatEngine: Claude Code, Codex or Hermes).
+// agent: agentchat.js namesNote), and which app the agent runs on (chatEngine: Claude Code, Codex, Hermes, or Local AI
+// on the person's own Ollama, localchat.js).
 const AGENT_APPS = [
   ['claude', 'Claude Code'],
   ['codex', 'Codex'],
-  ['hermes', 'Hermes']
+  ['hermes', 'Hermes'],
+  ['local', 'Local AI']
 ]
 function NameField({ label, hint, value, placeholder, onSave }) {
   const [v, setV] = useState(value || '')
@@ -162,8 +164,11 @@ function NameField({ label, hint, value, placeholder, onSave }) {
 }
 function YouCard({ n, settings, setSettings, notify }) {
   const [installed, setInstalled] = useState({})
+  // Local AI's model: one of the person's Ollama models (it has to be able to use tools)
+  const [ollamaModels, setOllamaModels] = useState(null)
   useEffect(() => {
     window.ivstudio.chat.status().then((s) => setInstalled(s.installed || {}), () => {})
+    window.ivstudio.prompts.status().then((s) => setOllamaModels((s.models || []).map((m) => m.name)), () => setOllamaModels([]))
   }, [])
   const set = async (patch) => {
     try {
@@ -181,12 +186,24 @@ function YouCard({ n, settings, setSettings, notify }) {
       <SetField label="It runs on" hint="The agent app on this PC that does the work, on its own sign-in and plan. Ideas from the Dashboard run on Claude Code or Codex. Settings → Agents has the details.">
         <div className="segmented" role="radiogroup" aria-label="Agent app">
           {AGENT_APPS.map(([id, label]) => (
-            <button key={id} role="radio" aria-checked={app === id} className={app === id ? 'on' : ''} disabled={!installed[id]} title={installed[id] ? '' : `${label} isn’t on this PC`} onClick={() => set({ chatEngine: id })}>
+            <button key={id} role="radio" aria-checked={app === id} className={app === id ? 'on' : ''} disabled={!installed[id]} title={installed[id] ? '' : id === 'local' ? 'Local AI needs Ollama (ollama.com) on this PC' : `${label} isn’t on this PC`} onClick={() => set({ chatEngine: id })}>
               {label}
             </button>
           ))}
         </div>
       </SetField>
+      {app === 'local' && (
+        <SetField label="Local AI’s model" hint="A model in your Ollama that can use tools, like Qwen3 or Llama 3.1. Free and private, on this PC; slower and simpler than Claude Code or Codex, with IV Studio’s everyday tools. Empty uses the prompt writer’s model.">
+          <select value={settings.localChatModel || ''} onChange={(e) => set({ localChatModel: e.target.value })}>
+            <option value="">Same as the prompt writer{settings.ollamaModel ? ` (${settings.ollamaModel})` : ''}</option>
+            {(ollamaModels || []).map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </SetField>
+      )}
     </SetCard>
   )
 }

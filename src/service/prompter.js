@@ -342,7 +342,7 @@ export async function ollamaStatus() {
   }
 }
 
-function ollamaExe() {
+export function ollamaExe() {
   // the Mac app keeps its command line tool inside the app until "Install command line" is clicked
   if (process.platform === 'darwin') return onPath('ollama') || ['/Applications', path.join(os.homedir(), 'Applications')].map((d) => path.join(d, 'Ollama.app', 'Contents', 'Resources', 'ollama')).find((f) => fs.existsSync(f)) || null
   if (process.platform !== 'win32') return onPath('ollama')

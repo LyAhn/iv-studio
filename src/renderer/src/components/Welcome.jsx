@@ -303,12 +303,13 @@ function Hello({ level, knows }) {
 // Make it yours: names (you, your agent and the app it runs on), the colour, and the words and contrast switches.
 // For someone new, the agent is called a helper, explained in a sentence, and optional.
 function MakeItYours({ isNew, names, setNames, agents, simple, words, hc, contrast, accent, tint }) {
-  const [hermes, setHermes] = useState(false)
+  const [chatApps, setChatApps] = useState({})
   useEffect(() => {
-    window.ivstudio.chat.status().then((s) => setHermes(!!s.installed?.hermes), () => {})
+    window.ivstudio.chat.status().then((s) => setChatApps(s.installed || {}), () => {})
   }, [])
-  const has = { claude: !!agents?.claude?.installed, codex: !!agents?.codex?.installed, hermes }
-  const any = has.claude || has.codex || has.hermes
+  // Local AI: the chat on the person's own Ollama (localchat.js)
+  const has = { claude: !!agents?.claude?.installed, codex: !!agents?.codex?.installed, hermes: !!chatApps.hermes, local: !!chatApps.local }
+  const any = has.claude || has.codex || has.hermes || has.local
   return (
     <>
       <section className="block create-step wel-names">
@@ -330,12 +331,13 @@ function MakeItYours({ isNew, names, setNames, agents, simple, words, hc, contra
         {any ? (
           <Seg
             label="It runs on"
-            value={names.chatEngine || (has.claude ? 'claude' : has.codex ? 'codex' : 'hermes')}
+            value={names.chatEngine || (has.claude ? 'claude' : has.codex ? 'codex' : has.hermes ? 'hermes' : 'local')}
             onChange={(v) => setNames({ ...names, chatEngine: v })}
             options={[
               ['claude', 'Claude Code', !has.claude && 'Claude Code isn’t on this PC'],
               ['codex', 'Codex', !has.codex && 'Codex isn’t on this PC'],
-              ['hermes', 'Hermes', !has.hermes && 'Hermes isn’t on this PC']
+              ['hermes', 'Hermes', !has.hermes && 'Hermes isn’t on this PC'],
+              ['local', 'Local AI', !has.local && 'Local AI needs Ollama on this PC']
             ]}
           />
         ) : (

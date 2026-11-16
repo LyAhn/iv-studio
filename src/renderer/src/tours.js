@@ -24,7 +24,7 @@ export const TOURS = {
       { go: { page: 'audio', section: 'audio' }, at: '.section-switch', title: 'The sound side', text: 'Visual and Audio switch the sidebar. Audio has Voices, Lines, Music and Sounds.' },
       { go: { page: 'media', section: 'video' }, at: '.nav-library', title: 'Library', text: 'Everything you made, in one place: videos, pictures, songs and voice lines.' },
       { go: { page: 'cloud', section: 'video' }, at: '.cloud-guided', title: 'Cloud', text: 'No strong graphics card? Render on your own cloud GPU account instead.' },
-      { go: { page: 'home', section: 'video' }, at: '.chat-open', title: 'Chat with your agent', text: 'Your own Claude Code, Codex or Hermes, inside IV Studio. Type or talk; it knows what you’re looking at. History keeps earlier conversations, Activity shows what agents did (with Undo), and it can pop out into its own window.' },
+      { go: { page: 'home', section: 'video' }, at: '.chat-open', title: 'Chat with your agent', text: 'Your own Claude Code, Codex, Hermes or Local AI (free, in Ollama), inside IV Studio. Type or talk; it knows what you’re looking at. History keeps earlier conversations, Activity shows what agents did (with Undo), and it can pop out into its own window.' },
       { go: { page: 'settings', section: 'video' }, at: '.settings-tabs', title: 'Settings and Setup', text: 'How IV Studio works for you, and what ComfyUI has and needs.' },
       { go: { page: 'home', section: 'video' }, at: '.hero-help', title: 'Help on every page', text: 'Every page has this How it works button. Click it any time for a walk through that page, the same way as this tour.' }
     ]
@@ -38,7 +38,7 @@ export const TOURS = {
       { at: '.dash-recent', title: 'Your latest work', text: 'The newest things you made. Click one to watch it and step through its versions.' },
       { at: '.cast-cards', title: 'Your cast', text: 'Your characters, with their faces and voices. New shot starts a shot with them already picked.' },
       { at: '.nav', title: 'Every page', text: 'The sidebar has every page. Visual and Audio at the bottom switch between the picture side and the sound side.' },
-      { at: '.chat-open', title: 'Chat with your agent', text: 'Your own Claude Code, Codex or Hermes, inside IV Studio. Type or talk; it knows what you’re looking at. History keeps earlier conversations, Activity shows what agents did (with Undo), and it can pop out into its own window.' },
+      { at: '.chat-open', title: 'Chat with your agent', text: 'Your own Claude Code, Codex, Hermes or Local AI (free, in Ollama), inside IV Studio. Type or talk; it knows what you’re looking at. History keeps earlier conversations, Activity shows what agents did (with Undo), and it can pop out into its own window.' },
       { at: '.engine-badge', title: 'ComfyUI and your GPU', text: 'Whether ComfyUI is ready, and how much of your graphics card and memory is in use. Free memory unloads models when you need room.' },
       { at: '.hero-help', title: 'Help on every page', text: 'This button is on every page. Click it any time to walk through what that page does.' }
     ]
@@ -289,7 +289,7 @@ export const TOURS = {
       { at: '.set-nav', title: 'Jump around', text: 'Every topic in one list. Click one to jump to it.' },
       { at: '#set-pc', title: 'Your PC', text: 'What your computer can do. Check again re-runs the scan and its recommended defaults.' },
       { at: '.speed-cards', title: 'Speed', text: 'How each new shot starts: Quality, Balanced, Fast or Low memory. The one that suits this PC is marked. Times are from an RTX 4090; smaller cards take longer.' },
-      { at: '#set-you', title: 'You and your agent', text: 'Your name, your agent’s name, and whether it runs on Claude Code, Codex or Hermes. The chat and the Dashboard use the names.' },
+      { at: '#set-you', title: 'You and your agent', text: 'Your name, your agent’s name, and whether it runs on Claude Code, Codex, Hermes or Local AI (Ollama, free on this PC). The chat and the Dashboard use the names.' },
       { at: '#set-access', title: 'Colour and accessibility', text: 'Pick the app’s colour (red, blue, purple, orange, or Dark for greys only), then bigger text, higher contrast, less motion, clear focus outlines and underlined links. Each applies at once.' },
       { at: '#set-words', title: 'Words', text: 'Simple words: the app talks in everyday words instead of AI terms, for people new to this. Only the words change.' },
       { at: '#set-comfy', title: 'ComfyUI', text: 'Where ComfyUI is (typing localhost:8000 is fine), and whether IV Studio starts it for you when it opens.' },

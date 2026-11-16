@@ -11,9 +11,9 @@ const timeOf = (at) => (at ? new Date(at).toLocaleTimeString(undefined, { hour: 
 // The chat with the person's own Claude Code, Codex or Hermes (src/service/agentchat.js): a panel down the right side, over
 // whatever page is open. Every IV Studio tool; anything that deletes, costs money, installs or changes Settings shows
 // an Allow card first.
-const NAMES = { claude: 'Claude Code', codex: 'Codex', hermes: 'Hermes' }
+const NAMES = { claude: 'Claude Code', codex: 'Codex', hermes: 'Hermes', local: 'Local AI' }
 // whose plan or models a chat runs on
-const PLAN = { claude: 'Claude', codex: 'ChatGPT', hermes: 'Hermes' }
+const PLAN = { claude: 'Claude', codex: 'ChatGPT', hermes: 'Hermes', local: 'Ollama' }
 const RENDER = { queued: 'waiting', running: 'rendering', success: 'done', error: 'failed', cancelled: 'cancelled', unknown: '' }
 const KIND = { previews: 'Previews', finish: 'Finish', enhance: 'Enhance' }
 const IDEAS = ['What can you do in IV Studio?', 'Make a 5 second shot of a fox crossing a frozen lake at dawn', 'Which of my shots aren’t finished yet?']
@@ -318,9 +318,9 @@ function ContextMeter({ usage, engine }) {
           </p>
           <p>
             This chat: {tokens(usage.input)} tokens read ({tokens(usage.cached)} from cache), {tokens(usage.output)} written, over {usage.turns} {usage.turns === 1 ? 'turn' : 'turns'}.
-            {engine === 'hermes' ? ' It runs on the model and plan you picked in Hermes.' : usage.apiUsd > 0 ? ` At API prices about $${usage.apiUsd.toFixed(2)}; on your ${plan} plan you aren’t charged per token.` : ` It runs on your ${plan} plan.`}
+            {engine === 'local' ? ' It runs in Ollama on this PC: free, and nothing leaves your computer.' : engine === 'hermes' ? ' It runs on the model and plan you picked in Hermes.' : usage.apiUsd > 0 ? ` At API prices about $${usage.apiUsd.toFixed(2)}; on your ${plan} plan you aren’t charged per token.` : ` It runs on your ${plan} plan.`}
           </p>
-          <p className="dim">Your plan’s 5-hour and weekly limits aren’t shared with other apps; see them in {engine === 'claude' ? 'Claude (Settings → Usage)' : engine === 'hermes' ? 'Hermes (hermes status)' : 'ChatGPT or Codex'}.</p>
+          {engine !== 'local' && <p className="dim">Your plan’s 5-hour and weekly limits aren’t shared with other apps; see them in {engine === 'claude' ? 'Claude (Settings → Usage)' : engine === 'hermes' ? 'Hermes (hermes status)' : 'ChatGPT or Codex'}.</p>}
         </div>
       )}
     </>
@@ -442,7 +442,7 @@ export default function ChatPanel({ status, reload, onClose, context, go, notify
   const audioRef = useRef(null)
   const chat = status?.chat
   const installed = status?.installed || {}
-  const ready = ['claude', 'codex', 'hermes'].filter((e) => installed[e])
+  const ready = ['claude', 'codex', 'hermes', 'local'].filter((e) => installed[e])
   const pick = chat?.engine || (engine && installed[engine] ? engine : status?.preferred)
   // what the agent is called: the name the person gave it (Settings → Your agent), else its app's name
   const call = (e) => status?.agentName || NAMES[e]
@@ -744,7 +744,7 @@ export default function ChatPanel({ status, reload, onClose, context, go, notify
 
           {!pick ? (
             <div className="chat-body chat-setup">
-              <p className="small">The chat uses your own Claude Code, Codex or Hermes, on your own plan. Install one here, or sign in if you already have it. For Hermes, install it from hermes-agent.nousresearch.com and IV Studio finds it.</p>
+              <p className="small">The chat uses your own Claude Code, Codex or Hermes, on your own plan, or Local AI on your own Ollama, free on this PC. Install one here, or sign in if you already have it. For Hermes, install it from hermes-agent.nousresearch.com; for Local AI, Ollama from ollama.com. IV Studio finds them.</p>
               <AgentRows setup={setup} notify={notify} />
             </div>
           ) : (
@@ -870,7 +870,7 @@ export default function ChatPanel({ status, reload, onClose, context, go, notify
                   )}
                 </div>
                 <p className="chat-foot small dim">
-                  {pick === 'hermes' ? 'Your own Hermes, on the model you picked in Hermes. Here it uses IV Studio’s tools only, and asks before it deletes, spends money or changes a setting.' : `Your own ${NAMES[pick]}, on your ${PLAN[pick]} plan. It asks before it deletes, spends money or changes a setting.`}
+                  {pick === 'local' ? `Local AI, on ${status?.localModel || 'your Ollama model'} in Ollama on this PC: free and private. It has IV Studio’s everyday tools; Claude Code, Codex or Hermes can do more. It asks before it deletes, spends money or changes a setting.` : pick === 'hermes' ? 'Your own Hermes, on the model you picked in Hermes. Here it uses IV Studio’s tools only, and asks before it deletes, spends money or changes a setting.' : `Your own ${NAMES[pick]}, on your ${PLAN[pick]} plan. It asks before it deletes, spends money or changes a setting.`}
                 </p>
               </div>
             </>

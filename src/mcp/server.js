@@ -508,6 +508,34 @@ tool('write_prompt', "Write a MiniMax H3 prompt from a plain-words idea, using t
   const w = writerOf({ ...s, promptEngine: chosen })
   return studio.writePrompt(request, { engine: w.engine, apiKey: process.env.COMFY_ORG_API_KEY || null, model: w.model }).then((prompt) => ({ prompt, engine: w.engine }))
 })
+// One step from an idea to previews (Local AI's main way to make a shot; any agent can use it): the writer chosen in
+// Settings writes the H3 prompt, the checker's fixes are applied, and the previews start.
+tool('make_shot', "One step from a plain-words idea to previews of a text shot: the prompt writer chosen in Settings writes the MiniMax H3 prompt, the prompt checker mends what it can, and the previews start on this PC. Returns the job (follow with get_job) and the shot's id. For shots from pictures, a first frame or a video to carry on, use write_prompt and generate_previews instead.", {
+  idea: z.string().describe('What happens, in plain words, with any spoken line in quotes'),
+  character: z.string().default('none').describe('A character id from list_characters, or "none"'),
+  seconds: z.number().min(1).max(15).default(5),
+  aspect: z.enum(Object.keys(ASPECTS)).default('16:9'),
+  speed: z.enum(SPEED_IDS).optional().describe('quality, balanced, fast or low; leave it out for the one in Settings'),
+  name: z.string().optional().describe("The shot's name; leave it out to name it from the prompt")
+}, async ({ idea, character, seconds, aspect, speed, name }) => {
+  const s = readSettings(BASE)
+  if (character !== 'none' && !studio.characters().some((c) => c.id === character)) throw new Error(`There's no character "${character}". Use an id from list_characters, or "none".`)
+  const chosen = s.promptEngine === 'contextir' && !process.env.COMFY_ORG_API_KEY ? 'local' : s.promptEngine || 'local'
+  const w = writerOf({ ...s, promptEngine: chosen })
+  const shot = { mode: 'text', seconds, aspect, character }
+  let prompt = await studio.writePrompt({ ...shot, idea }, { engine: w.engine, apiKey: process.env.COMFY_ORG_API_KEY || null, model: w.model })
+  // the checker's own fixes, one at a time, while they help
+  for (let i = 0; i < 4; i++) {
+    const fix = blocking(checkRequest({ ...shot, prompt })).find((f) => f.fix)
+    if (!fix) break
+    prompt = fix.fix
+  }
+  const errors = blocking(checkRequest({ ...shot, prompt }))
+  if (errors.length) throw new Error(`The written prompt still has ${errors.length} problem${errors.length > 1 ? 's' : ''}: ${errors.map((f) => f.message).join(' | ')} Try once more, or describe the idea differently.`)
+  if (s.target !== 'cloud') await voices.release()
+  const job = await studio.generatePreviews(applySpeed({ ...shot, prompt, ...(name ? { projectName: name } : {}), ...(speed ? { speed } : {}) }, savedSpeed(s)))
+  return { ...job, prompt }
+})
 tool('write_shots_from_story', 'Split a short story into sequence shots and write each one so they join as one continuous take (the writer chosen in Settings: local, Claude Code or Codex).', {
   story: z.string(),
   shots: z.number().int().min(1).max(8).default(3),
@@ -1480,9 +1508,13 @@ tool('free_memory', "Clear the GPU and RAM now: ComfyUI unloads its models (betw
 // "Show me where" from IV Studio's own chat: the app goes to a page and lights up one part of it, as a tour does
 // (tours.js). The server writes a show file into the chat's folder; the app's chat (agentchat.js) passes it on.
 tool('list_places', "Places in IV Studio you can show the person with show_in_app: each page's parts, as where (the page), spot (the part) and what's there. Use it to answer \"where do I...\" questions.", {}, () => ({ items: placesToShow() }))
-tool('show_in_app', "Take the person to a place in IV Studio and light it up, the way a page's tour does, with your words beside it (say: one or two short sentences on what to do there). where and spot come from list_places. Works in IV Studio's own chat.", { where: z.enum(Object.keys(TOUR_PAGES)), spot: z.string(), say: z.string().max(300).optional() }, ({ where, spot, say }) => {
-  const step = TOURS[where].steps.find((s) => s.title === spot && s.at)
-  if (!step) throw new Error(`There's no "${spot}" on ${TOURS[where].title}. Pick a spot from list_places.`)
+tool('show_in_app', "Take the person to a place in IV Studio and light it up, the way a page's tour does, with your words beside it (say: one or two short sentences on what to do there). where and spot come from list_places. Works in IV Studio's own chat.", { where: z.enum(Object.keys(TOUR_PAGES)), spot: z.string().optional(), say: z.string().max(300).optional() }, ({ where, spot: asked, say }) => {
+  // the spot as listed, else one that matches loosely (any case, or the words inside it); none: the page's first part
+  const steps = TOURS[where].steps.filter((s) => s.at)
+  const want = String(asked || '').trim().toLowerCase()
+  const step = !want ? steps[0] : steps.find((s) => s.title.toLowerCase() === want) || steps.find((s) => s.title.toLowerCase().includes(want) || want.includes(s.title.toLowerCase()))
+  if (!step) throw new Error(`There's no "${asked}" on ${TOURS[where].title}. Its spots: ${steps.map((s) => `"${s.title}"`).join(', ')}. Or leave spot out to show the page.`)
+  const spot = step.title
   if (!AGENT_CHAT || !AGENT_ASK) throw new Error("show_in_app works in IV Studio's own chat, where the app can move. Tell the person the page and what to click instead.")
   fs.mkdirSync(AGENT_ASK, { recursive: true })
   const file = path.join(AGENT_ASK, `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}.show.json`)

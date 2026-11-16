@@ -71,6 +71,12 @@ H3 render. To report misuse, email [abuse@infinitevariance.ai](mailto:abuse@infi
   talks to it through Hermes's Agent Client Protocol server (`hermes-acp`, found where Hermes's installer puts it),
   gives the session IV Studio's tools, and resumes the same Hermes session for each message. Anything Hermes asks
   approval to run outside IV Studio (a shell command, a file edit) is declined and shown as a declined step.
+- **Local AI.** Pick Local AI and the chat runs on a model in your own [Ollama](https://ollama.com), free and on your
+  PC, with nothing sent anywhere. It gets IV Studio's everyday tools (look things up, make shots, pictures, songs and
+  lines, change an edit, show you around the app) and the same Allow cards; Claude Code, Codex or Hermes can do more.
+  The model is the prompt writer's unless you pick another in Settings → You and your agent; it has to be able to use
+  tools (Qwen3, Llama 3.1 and newer). It steps off the graphics card before a render starts. A new `make_shot` tool
+  goes from a plain-words idea to previews in one step, for any agent.
 - **Talk to it (1.1.3).** Press the mic in the chat, say what you want and press send. IV Studio's own Whisper writes
   it down on your PC (Audio → Voices → Set up voices once). Talking while the agent works stops its answer and
   sends your new words; renders it already started keep going. The speaker button reads each reply aloud in one of

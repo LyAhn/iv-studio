@@ -7,6 +7,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { AGENT_NAMES, SERVER, claudeArgs, codexChatArgs, killTree, parseLine, spawnAgent, stepLabel } from './agentrun.js'
 import { HERMES_NOTE, hermesTurn } from './hermesacp.js'
+import { LOCAL_PROMPT, localTurn } from './localchat.js'
 
 export const TURN_LIMIT_MS = 45 * 60 * 1000
 export const KEEP_CHATS = 20
@@ -149,7 +150,7 @@ export function contextLine(ctx = {}) {
 // One message's turn. dir: the chat's own folder (kept, so the agent's session can resume from the same place).
 // session: the agent's session to continue, or null for the first message. onEvent(e) gets parseLine's events plus
 // { type: 'ask', ask } and { type: 'asked', id, allow }. Resolves { ok, error, session, jobs } when the turn ends.
-export function startChatTurn({ engine, exe, dir, session = null, message, context = null, mcp, model = '', names = {}, extraEnv = {}, onEvent = () => {}, limitMs = TURN_LIMIT_MS, pollMs = 400 }) {
+export function startChatTurn({ engine, exe, dir, session = null, message, context = null, mcp, model = '', names = {}, extraEnv = {}, onEvent = () => {}, limitMs = TURN_LIMIT_MS, pollMs = 400, cpu = false }) {
   if (!AGENT_NAMES[engine]) throw new Error(`Unknown agent "${engine}".`)
   const work = path.join(dir, 'work')
   const askDir = path.join(dir, 'asks')
@@ -176,6 +177,9 @@ export function startChatTurn({ engine, exe, dir, session = null, message, conte
     args = codexChatArgs({ mcp: server, model, resume: session })
     // Codex has no system prompt of its own here: the first message carries it, and the session keeps it
     input = session ? text : `${chatPrompt()}${namesNote({ ...names, engine })}\n\n---\n\n${text}`
+  } else if (engine === 'local') {
+    // Local AI (localchat.js): IV Studio runs the loop itself, with its own short instructions
+    input = text
   } else {
     // Hermes (hermesacp.js): its ACP server takes IV Studio's MCP server for the session; the first message carries
     // the chat's instructions, as with Codex
@@ -261,7 +265,26 @@ export function startChatTurn({ engine, exe, dir, session = null, message, conte
   const childEnv = { ...process.env, NO_COLOR: '1', MCP_TOOL_TIMEOUT: String(15 * 60 * 1000) }
   let hermes = null
   let child
-  if (engine === 'hermes') {
+  let local = null
+  if (engine === 'local') {
+    local = localTurn({
+      server,
+      dir,
+      system: LOCAL_PROMPT + namesNote({ ...names, engine }),
+      text: input,
+      model,
+      cpu,
+      emit: (e) => {
+        if (e.type === 'session') newSession = e.id
+        if (e.type === 'step') e = { ...e, label: stepLabel(e.tool) }
+        emit(e)
+      }
+    })
+    local.done.then((r) => {
+      if (stopped) return finish(false, 'Stopped.')
+      finish(r.ok, r.ok ? null : r.error)
+    })
+  } else if (engine === 'hermes') {
     hermes = hermesTurn({
       exe,
       cwd: work,
@@ -290,7 +313,7 @@ export function startChatTurn({ engine, exe, dir, session = null, message, conte
   }
   let buf = ''
   let err = ''
-  if (!hermes) child.stdout.on('data', (d) => {
+  if (!hermes && !local) child.stdout.on('data', (d) => {
     buf += d
     let i
     while ((i = buf.indexOf('\n')) >= 0) {
@@ -304,7 +327,7 @@ export function startChatTurn({ engine, exe, dir, session = null, message, conte
       }
     }
   })
-  if (!hermes) child.stderr.on('data', (d) => (err = (err + d).slice(-2000)))
+  if (!hermes && !local) child.stderr.on('data', (d) => (err = (err + d).slice(-2000)))
   const finish = (ok, error) => {
     if (ended) return
     ended = true
@@ -319,11 +342,12 @@ export function startChatTurn({ engine, exe, dir, session = null, message, conte
     resolveTurn({ ok, error, session: newSession, jobs: jobs() })
   }
   const timer = setTimeout(() => {
-    killTree(child)
+    local?.cancel()
+    if (child) killTree(child)
     finish(false, `${AGENT_NAMES[engine]} worked for ${Math.round(limitMs / 60000)} minutes, the limit for one message, and was stopped.`)
   }, limitMs)
-  if (!hermes) child.on('error', (e) => finish(false, `${AGENT_NAMES[engine]} couldn't start: ${e.message}`))
-  if (!hermes) child.on('close', (code) => {
+  if (!hermes && !local) child.on('error', (e) => finish(false, `${AGENT_NAMES[engine]} couldn't start: ${e.message}`))
+  if (!hermes && !local) child.on('close', (code) => {
     if (stopped) return finish(false, 'Stopped.')
     if (endEvent) return finish(endEvent.ok, endEvent.ok ? null : endEvent.text || `${AGENT_NAMES[engine]} stopped with a problem.`)
     finish(code === 0, code === 0 ? null : err.trim().split('\n').filter(Boolean).pop() || `${AGENT_NAMES[engine]} stopped (code ${code}).`)
@@ -344,6 +368,7 @@ export function startChatTurn({ engine, exe, dir, session = null, message, conte
     stop() {
       if (ended) return
       stopped = true
+      if (local) return local.cancel()
       if (hermes) hermes.cancel()
       killTree(child)
     }
