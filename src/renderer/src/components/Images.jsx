@@ -6,6 +6,7 @@ import { ask } from './Confirm'
 import { AspectTiles, DropIcon, ImageModeIcon, StepHead } from './CreateKit'
 import PictureTools from './PictureTools'
 import HfLogin from './HfLogin'
+import TemplateBar from './Templates'
 
 const I = () => window.ivstudio.images
 const MODES = [
@@ -156,6 +157,19 @@ export default function Images({ kindSwitch, notify, go, pictureToShot, incoming
   const [setupFam, setSetupFam] = useState(null) // a family that isn't set up, opened to see what it needs
   const [yours, , reloadYours] = useYours()
   const set = (patch) => setForm((f) => ({ ...f, ...patch }))
+  // Templates and New (Templates.jsx; saved in the data folder). New keeps the model picked; the rest starts over.
+  const imageSetup = (f) => JSON.stringify({ ...f, family: null, model: null })
+  const pickTemplate = (f, { prompt, media }) => {
+    const t = { ...f }
+    if (!prompt) delete t.prompt
+    if (!media) delete t.refs
+    return t
+  }
+  async function applyTemplate(t) {
+    const refs = t.form.refs ? (await Promise.all(t.form.refs.map((r) => window.ivstudio.media.probe(r).then(() => r, () => null)))).filter(Boolean) : undefined
+    setForm((f) => ({ ...f, ...t.form, ...(refs ? { refs } : t.form.mode !== f.mode ? { refs: [] } : {}) }))
+  }
+  const templateSummary = (f) => [families.find((x) => x.id === f.family)?.label, MODES.find(([id]) => id === f.mode)?.[1], f.aspect, f.loras?.length && `${f.loras.length} LoRA${f.loras.length > 1 ? 's' : ''}`].filter(Boolean).join(' · ')
   // an iv:go with a mode (App.jsx) can open Image on Generate or Edit
   useEffect(() => {
     const go = (e) => e.detail?.create === 'image' && e.detail.mode && set({ mode: e.detail.mode })
@@ -292,6 +306,20 @@ export default function Images({ kindSwitch, notify, go, pictureToShot, incoming
     <div className="images-page create-v2">
       <Hero art="create" title="Create" kicker="New image" help="image" />
       {kindSwitch}
+
+      <TemplateBar
+        kind="image"
+        form={form}
+        pick={pickTemplate}
+        apply={applyTemplate}
+        onNew={() => setForm((f) => ({ ...fresh(), family: f.family, model: f.model }))}
+        fresh={imageSetup(form) === imageSetup(fresh())}
+        summary={templateSummary}
+        hasPrompt={!!form.prompt.trim()}
+        hasMedia={form.refs.length > 0}
+        mediaWord="the pictures to edit"
+        notify={notify}
+      />
       {status?.error && <p className="notice">{status.error}</p>}
 
       {toolsMode ? (

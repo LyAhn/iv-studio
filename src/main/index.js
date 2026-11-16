@@ -1,4 +1,5 @@
-import { workspaceHost } from '../service/iv-workspace-host.js'
+import { workspaceHost } from '../service/iv-workspace-host.js'
+import { CreateMemory } from '../service/createmem'
 import { receiveStudio } from '../service/iv-workspace-import.js'
 import { isHarness } from '../service/harness.js'
 import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, powerSaveBlocker, protocol, safeStorage, screen, shell } from 'electron'
@@ -2914,6 +2915,13 @@ app.whenReady().then(() => {
     return { before, after, ollama, busy }
   })
   // @ mentions: the cast (characters) and places a prompt can name, and the places themselves
+  // Create's memory (createmem.js): the last setup on each side, and saved templates; in DATA, so Incognito keeps its own
+  const createMem = new CreateMemory({ dataDir: DATA })
+  handle('createmem:get', (kind) => createMem.get(kind))
+  handle('createmem:saveLast', (kind, form, opts) => (createMem.saveLast(kind, form, opts), true))
+  handle('createmem:clearLast', (kind) => createMem.clearLast(kind))
+  handle('createmem:saveTemplate', (kind, t) => createMem.saveTemplate(kind, t))
+  handle('createmem:deleteTemplate', (kind, id) => createMem.deleteTemplate(kind, id))
   handle('cast:list', () => studio.cast.members())
   handle('cast:places', () => studio.cast.places())
   handle('cast:savePlace', (place) => studio.cast.savePlace(place))

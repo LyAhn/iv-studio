@@ -360,6 +360,8 @@ contextBridge.exposeInMainWorld('ivstudio', {
   rank: { job: call('rank:job'), learn: call('rank:learn'), clean: call('rank:clean') },
   review: { take: call('review:take') },
   previs: { make: call('previs:make') },
+  // Create's last setup and saved templates (src/service/createmem.js)
+  createMemory: { get: call('createmem:get'), saveLast: call('createmem:saveLast'), clearLast: call('createmem:clearLast'), saveTemplate: call('createmem:saveTemplate'), deleteTemplate: call('createmem:deleteTemplate') },
   cast: { list: call('cast:list'), places: call('cast:places'), savePlace: call('cast:savePlace'), deletePlace: call('cast:deletePlace') },
   render: { plan: call('render:plan'), planFinish: call('render:planFinish'), price: call('render:price'), priceFinish: call('render:priceFinish'), previews: call('render:previews'), finish: call('render:finish'), enhance: call('render:enhance') },
   jobs: { watch: call('jobs:watch'), cancel: call('jobs:cancel'), onUpdate: on('jobs:update'), onLive: on('jobs:live') },

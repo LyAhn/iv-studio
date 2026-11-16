@@ -20,6 +20,7 @@ import Starters from './Starters'
 import { CinemaChips, CinemaPicker, PromptTools, useSlate } from './CraftKit'
 import { withSetups, withoutSetups } from '../../../service/setuptext'
 import { starterById, starterForm } from '../starters'
+import TemplateBar from './Templates'
 
 // the preview pass's tested sampler and scheduler (plan.js DEFAULTS)
 const SAMPLER_DEFAULT = 'er_sde'
@@ -95,6 +96,36 @@ const LX_HINTS = {
 const LTX_TEMPLATE = 'A 3D animated short in a warm, soft style. A ___ in ___, ___ light. ___ happens, step by step. The camera slowly ___. We hear ___, and ___ says, "___".'
 
 const base = (p) => p.split(/[\\/]/).pop()
+// A new shot's form (New, and what Create opens on before anything is remembered)
+const FRESH_FORM = {
+  projectId: null, // set when editing a shot's run: the new run joins that shot
+  projectName: '',
+  engine: 'h3', // 'h3' (this PC) or 'seedance' (Comfy credits)
+  tier: 'draft',
+  audio: true,
+  mode: 'text',
+  character: 'none',
+  with: [], // others in the shot (GitHub #30): they come along as their face pictures (cast.js withCast)
+  prompt: '',
+  aspect: '16:9',
+  megapixels: 0.4,
+  seconds: 5,
+  previews: 3,
+  seed: 4242,
+  steps: 8,
+  sampler: SAMPLER_DEFAULT,
+  scheduler: SCHEDULER_DEFAULT,
+  media: [],
+  overlapFrames: 22,
+  voiceLine: null,
+  refmods: [],
+  retention: 1,
+  extraLoras: []
+}
+// the parts of a form a speed preset sets; they don't count as a change of setup
+const SPEED_KEYS = ['megapixels', 'steps', 'previews']
+const setupOf = (f) => JSON.stringify(Object.fromEntries(Object.entries(f).filter(([k]) => !['projectId', 'projectName', 'voiceItem', ...SPEED_KEYS].includes(k)).map(([k, v]) => [k, k === 'media' ? (v || []).map((m) => m.path) : v])))
+const FRESH_SETUP = setupOf(FRESH_FORM)
 // The first <d>[Language] …</d> in a prompt takes the spoken words; a prompt without one is left alone.
 const DIALOGUE = /<d>\[([^\]]+)\][^<]*<\/d>/
 const withLine = (prompt, text) => {
@@ -105,31 +136,8 @@ const withLine = (prompt, text) => {
 export default function Create({ setup, characters, notify, openShot, go, incomingLine, clearIncomingLine, incomingLora, clearIncomingLora, incomingPicture, clearIncomingPicture, incomingCharacter, clearIncomingCharacter, incomingRun, clearIncomingRun, kindSwitch }) {
   // the speed preset saved in Settings → Your PC (service/speed.js)
   const [savedId, setSavedId] = useState('quality')
-  const [form, setForm] = useState({
-    projectId: null, // set when editing a shot's run: the new run joins that shot
-    projectName: '',
-    engine: 'h3', // 'h3' (this PC) or 'seedance' (Comfy credits)
-    tier: 'draft',
-    audio: true,
-    mode: 'text',
-    character: 'none',
-    with: [], // others in the shot (GitHub #30): they come along as their face pictures (cast.js withCast)
-    prompt: '',
-    aspect: '16:9',
-    megapixels: 0.4,
-    seconds: 5,
-    previews: 3,
-    seed: 4242,
-    steps: 8,
-    sampler: SAMPLER_DEFAULT,
-    scheduler: SCHEDULER_DEFAULT,
-    media: [],
-    overlapFrames: 22,
-    voiceLine: null,
-    refmods: [],
-    retention: 1,
-    extraLoras: []
-  })
+  const [form, setForm] = useState(() => structuredClone(FRESH_FORM))
+
   const [advanced, setAdvanced] = useState(false)
   const [pickingRefmod, setPickingRefmod] = useState(false)
   // the samplers and schedulers this ComfyUI offers, read when Advanced first opens
@@ -166,6 +174,84 @@ export default function Create({ setup, characters, notify, openShot, go, incomi
   const [planError, setPlanError] = useState(null)
   const [busy, setBusy] = useState(false)
   const set = (patch) => setForm((f) => ({ ...f, ...patch }))
+
+  // Create's memory (src/service/createmem.js): Create opens set up as it was last left or run, unless something
+  // was sent here to start from (a run to edit, a line, a starter...). Every change is kept; New empties the form.
+  const [last, setLast] = useState(null) // the remembered setup's note, while the form is still that setup
+  const memReady = useRef(false)
+  const openedOn = useRef(null)
+  const formNow = useRef(form)
+  formNow.current = form
+  // files probed again for their tiles; ones that are gone are left out
+  const withInfo = async (list) =>
+    (
+      await Promise.all(
+        (list || []).map((m) =>
+          window.ivstudio.media.probe(m.path).then(
+            (info) => ({ ...m, info }),
+            () => null
+          )
+        )
+      )
+    ).filter(Boolean)
+  const filled = async (saved) => {
+    const media = saved.media ? await withInfo(saved.media) : undefined
+    const voice = saved.voiceLine ? (await withInfo([{ kind: 'audio', path: saved.voiceLine }]))[0] || null : saved.voiceLine === undefined ? undefined : null
+    const known = (id) => !characters?.length || characters.some((c) => c.id === id)
+    return {
+      ...saved,
+      ...(media ? { media } : {}),
+      ...(voice !== undefined ? { voiceLine: voice?.path || null, voiceItem: voice } : {}),
+      ...(saved.character && !known(saved.character) ? { character: 'none' } : {}),
+      ...(saved.with ? { with: saved.with.filter(known) } : {})
+    }
+  }
+  useEffect(() => {
+    let live = true
+    window.ivstudio.createMemory
+      .get('video')
+      .then(async (m) => {
+        const saved = m.last?.form
+        if (saved && setupOf({ ...FRESH_FORM, ...saved }) !== FRESH_SETUP) {
+          const patch = await filled(saved)
+          if (live && setupOf(formNow.current) === FRESH_SETUP && !formNow.current.projectId) {
+            const next = { ...structuredClone(FRESH_FORM), ...patch, projectId: null, projectName: '' }
+            openedOn.current = setupOf(next)
+            setForm(next)
+            setLast(m.last)
+          }
+        }
+      })
+      .catch(() => {})
+      .finally(() => (memReady.current = true))
+    return () => (live = false)
+  }, [])
+  useEffect(() => {
+    if (!memReady.current) return
+    if (last && setupOf(form) !== openedOn.current) setLast(null)
+    const t = setTimeout(() => window.ivstudio.createMemory.saveLast('video', form).catch(() => {}), 600)
+    return () => clearTimeout(t)
+  }, [form])
+  function startNew() {
+    setForm({ ...structuredClone(FRESH_FORM), ...previewFor(savedId) })
+    setStarter(null)
+    setLast(null)
+  }
+  // a template: everything set up, with the prompt and the media only when asked for
+  const pickTemplate = (f, { prompt, media }) => {
+    const { projectId, projectName, voiceItem, ...rest } = f
+    if (!prompt) delete rest.prompt
+    if (!media) (delete rest.media, delete rest.voiceLine)
+    return rest
+  }
+  async function applyTemplate(t) {
+    const patch = await filled(t.form)
+    setForm((f) => ({ ...f, ...patch, ...(!t.form.media && patch.mode !== f.mode ? { media: [] } : {}) }))
+    setStarter(null)
+  }
+  const engineName = (id) => ENGINES.find(([e]) => e === id)?.[1] || 'MiniMax H3'
+  const templateSummary = (f) =>
+    [engineName(f.engine), MODES.find(([id]) => id === f.mode)?.[1], characters?.find?.((c) => c.id === f.character)?.name, f.aspect, f.seconds && `${f.seconds} s`, f.extraLoras?.length && `${f.extraLoras.length} LoRA${f.extraLoras.length > 1 ? 's' : ''}`].filter(Boolean).join(' · ')
   // an iv:go with a mode (App.jsx) can open Create on that mode
   useEffect(() => {
     const go = (e) => e.detail?.create === 'video' && e.detail.mode && set({ mode: e.detail.mode, media: [] })
@@ -427,6 +513,8 @@ export default function Create({ setup, characters, notify, openShot, go, incomi
         if (!spend) return
       }
       const job = await window.ivstudio.render.previews({ ...request, projectId: form.projectId || undefined, projectName: form.projectName || undefined, ...(spend ? { spend } : {}) })
+      // the last run: Create opens on it next time
+      window.ivstudio.createMemory.saveLast('video', form, { ran: true }).catch(() => {})
       notify('Previews started. You can keep working; they appear here as they finish.', 'info')
       openShot(job.projectId)
     } catch (err) {
@@ -501,6 +589,21 @@ export default function Create({ setup, characters, notify, openShot, go, incomi
         />
       </Stage>
       {kindSwitch}
+
+      <TemplateBar
+        kind="video"
+        form={form}
+        pick={pickTemplate}
+        apply={applyTemplate}
+        onNew={startNew}
+        fresh={setupOf(form) === FRESH_SETUP && !form.projectId}
+        last={last}
+        summary={templateSummary}
+        hasPrompt={!!form.prompt.trim()}
+        hasMedia={form.media.length > 0 || !!form.voiceLine}
+        mediaWord="the pictures, clips and voice line"
+        notify={notify}
+      />
 
       {form.projectId && (
         <p className="notice editing-run">

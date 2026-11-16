@@ -47,6 +47,7 @@ export const TOURS = {
     title: 'Create a shot',
     steps: [
       { at: '.create-kind', title: 'Video or picture', text: 'Make a shot with sound (Video) or a still picture (Image).' },
+      { at: '.template-bar', title: 'Templates and New', text: 'Create opens set up like your last run, so you can change one thing and hunt again. Save as template keeps a setup under a name (the prompt and files only if you want); Templates fills the form from one. New starts over with an empty form.' },
       { at: '.engine-switch', title: 'The model', text: 'MiniMax H3 renders on this PC, free. LTX 2.5 is free here too: quicker, good for cartoons, from words or a first frame. Seedance 2.5 uses your Comfy.org credits; you see the price and confirm first.' },
       { at: 'step:What kind of shot', title: 'What kind of shot', text: 'Text starts from words alone. References, Frames and Continue start from your pictures or a video.' },
       { at: "step:Who's in it", title: 'Who is in it', text: 'Pick a character so they look and sound the same in every shot. Click more than one to put them in the shot together: the first leads, the others come along as their face pictures. LoRAs and RefMods add a look, a style or a move.' },
@@ -63,6 +64,7 @@ export const TOURS = {
     title: 'Create a picture',
     steps: [
       { at: '.create-kind', title: 'Video or picture', text: 'Image makes still pictures. Switch back to Video for shots with sound.' },
+      { at: '.template-bar', title: 'Templates and New', text: 'Save as template keeps the model, LoRAs, shape and settings under a name, with the prompt and pictures if you want. Templates fills the form from one. New clears everything but the model.' },
       { at: 'step:What to make', title: 'Make, edit or fix', text: 'Generate makes new pictures from words. Edit changes a picture you give it. Tools are one-step fixes: inpaint, relight, remove the background, upscale, depth map.' },
       { at: 'step:The tool', title: 'The tool', text: 'Pick a fix. One that still needs its model says so and downloads it here.' },
       { at: 'step:The picture', title: 'The picture', text: 'Drop in a picture, or open one of yours below and press Fix this. For Inpaint, paint over the part to change.' },
