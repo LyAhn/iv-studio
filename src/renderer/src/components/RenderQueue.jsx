@@ -82,7 +82,7 @@ export default function RenderQueue({ remote, notify, open }) {
   const waiting = items.length - running
   return (
     <div className={`render-queue ${items.length ? 'busy' : ''}`}>
-      <button className={`live-switch ${pip ? 'on' : ''}`} role="switch" aria-checked={pip} onClick={() => setPipSaved(!pip)} title={pip ? 'Turn the live preview off: renders started from now on skip the step pictures. Takes you’ve already hunted still finish without rendering again.' : 'Show what’s rendering, step by step, in a corner of every page. Step pictures use a little GPU time each step, so renders can run slightly slower. Switching it on or off between hunting and finishing doesn’t lose your takes.'}>
+      <button className={`live-switch ${pip ? 'on' : ''}`} role="switch" aria-checked={pip} onClick={() => setPipSaved(!pip)} title={pip ? 'Turn the live preview off: renders started from now on skip the step pictures. Takes you’ve already hunted still finish without rendering again.' : 'Show what’s rendering, step by step, in a corner of every page. Renders started from now on send step pictures; one already running finishes without them. Step pictures use a little GPU time each step, so renders can run slightly slower. Switching it on or off between hunting and finishing doesn’t lose your takes.'}>
         <span className="switch-track">
           <span className="switch-knob" />
         </span>

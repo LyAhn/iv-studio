@@ -378,7 +378,11 @@ export default function LivePip({ items, now, kindLabel, open, onOff }) {
               ? 'Started outside IV Studio: no picture to show.'
               : item.live
                 ? 'The first step’s picture shows here in a few seconds.'
-                : 'This render shows its progress, not a picture, until it’s done (step pictures need ComfyUI on this PC with KJNodes, and a render that samples).'}
+                : item.liveWhy === 'switch'
+                  ? 'Live preview was off when this render started, so it has no step pictures. The next render you start shows them.'
+                  : item.liveWhy === 'cloud'
+                    ? 'Cloud renders show their progress, not a picture, until they’re done.'
+                    : 'This render shows its progress, not a picture, until it’s done (step pictures need ComfyUI on this PC with KJNodes, and a render that samples).'}
           </div>
         )}
       </div>

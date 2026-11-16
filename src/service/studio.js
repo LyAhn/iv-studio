@@ -786,7 +786,9 @@ export class Studio {
     const problems = checkPrompt(graph)
     if (problems.length) throw new Error(`Internal graph error: ${problems.join('; ')}`)
     await this.makeRoom(kind)
-    const promptId = await this.comfy.submit(graph, { iv_studio: { kind, project: projectId, sequence: sequenceId } })
+    // previewOff: the Live preview switch was off when this was queued, so the live panel can say why it has no
+    // step pictures (they're decided when a render starts; turning the switch on later doesn't add them)
+    const promptId = await this.comfy.submit(graph, { iv_studio: { kind, project: projectId, sequence: sequenceId, ...(this.livePreviewOn() ? {} : { previewOff: true }) } })
     const job = {
       id: randomUUID().slice(0, 12),
       kind,
@@ -1622,6 +1624,8 @@ export class Studio {
         // whether this prompt sends step pictures (withLivePreview or withLivePreviewAll added its node): not in
         // the cloud, and not without KJNodes' preview node on this PC
         live: !!i[2]?.[LIVE_NODE],
+        // why not: 'switch' (Live preview was off when it was queued), 'cloud', or null (no KJNodes, or nothing samples)
+        liveWhy: i[2]?.[LIVE_NODE] ? null : ours?.previewOff ? 'switch' : this.comfy.remote ? 'cloud' : null,
         jobId: job?.id || null,
         kind: job?.kind || ours?.kind || null,
         name: job?.name || null,
