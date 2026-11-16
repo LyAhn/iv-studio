@@ -10,7 +10,7 @@ let n = 0
 const ok = (name, fn) => (fn(), n++, console.log('ok ', name))
 
 ok('the workspace comes from `modal token info`, and nothing else counts as signed in', () => {
-  assert.equal(workspaceOf('Token: ak-x\nWorkspace: matt-37887 (ac-abc)\nUser: matt-37887 (us-x)\n'), 'matt-37887')
+  assert.equal(workspaceOf('Token: ak-x\nWorkspace: pat-12345 (ac-abc)\nUser: pat-12345 (us-x)\n'), 'pat-12345')
   assert.equal(workspaceOf('Token: ak-x\r\nWorkspace: team-a (ac-1)\r\n'), 'team-a')
   // what `modal profile current` says with no token at all, and Modal's error box
   assert.equal(workspaceOf('default'), null)

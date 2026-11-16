@@ -6,8 +6,8 @@ import { randomUUID } from 'node:crypto'
 // the ComfyUI-MiniMaxH3Mod pack (MIT, Luisa) and saved under ComfyUI's models/refmods. A RefMod character goes into
 // a shot as RefMod 1 (plan.js) instead of loading a character LoRA, and {char} becomes its name.
 //
-// Making one is Matt's "RefMod Creator" workflow as IV Studio's own graph: up to six pictures (and a voice clip of
-// up to 15 seconds) through "Create H3 RefMod Master" with the settings his notes give for a character (Full
+// Making one is the "RefMod Creator" workflow as IV Studio's own graph: up to six pictures (and a voice clip of
+// up to 15 seconds) through "Create H3 RefMod Master" with the settings its notes give for a character (Full
 // Reference, 768 px, pool 8×8, one latent frame for pictures, 100 refinement steps, 2048 tokens), saved as one
 // bundle: models/refmods/characters/<name>.safetensors. On a 4090 a one-picture RefMod takes about 13 seconds.
 export const REFMOD_FOLDER = 'characters'

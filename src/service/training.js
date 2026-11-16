@@ -155,7 +155,7 @@ export const RUNPOD_TRAIN_GPUS = [
   { id: 'NVIDIA H100 80GB HBM3', label: 'H100 · 80 GB', perHour: 3.99, secPerStep: 1.5, note: 'The fastest here, about $4 an hour.' },
   { id: 'NVIDIA RTX 6000 Ada Generation', label: 'RTX 6000 Ada · 48 GB', perHour: 0.99, secPerStep: 2.8, note: 'Like the L40S, a little slower and cheaper.' }
 ]
-// This PC: free. Measured on Matt's RTX 4090 (24 GB, 64 GB RAM) with Theo's set, 2026-11-07: Fizgig's auto plan
+// This PC: free. Measured on an RTX 4090 (24 GB, 64 GB RAM) with Theo's set, 2026-11-07: Fizgig's auto plan
 // (a 4-bit base, 40 blocks streamed) 3.17 s a step, peak 9.5 GB; the int8 base (40 blocks streamed) 6.73 s, peak 13.8 GB.
 export const LOCAL_TRAIN = { id: 'local', label: 'This PC', perHour: 0, secPerStep: 3.2, secPerStepInt8: 6.7, note: 'Free. Your graphics card is busy while it trains.' }
 export const TRAIN_WHERE = ['modal', 'runpod', 'local']

@@ -80,7 +80,7 @@ await ok('the swap script waits, keeps data, puts things back on failure and reo
   assert.match(s, /Start-Process -FilePath 'D:\\IV Studio\\IV Studio.exe'/)
   assert.doesNotMatch(installScript({ pid: 1, appDir: 'C:\\a', staged: 'C:\\b', log: 'C:\\l', relaunch: false }), /Start-Process/)
   // a quote in a folder name stays inside its PowerShell string
-  assert.match(installScript({ pid: 1, appDir: "C:\\Matt's apps", staged: 'C:\\b', log: 'C:\\l' }), /'C:\\Matt''s apps'/)
+  assert.match(installScript({ pid: 1, appDir: "C:\\Pat's apps", staged: 'C:\\b', log: 'C:\\l' }), /'C:\\Pat''s apps'/)
 })
 
 await ok('old files left by an update are removed next time, nothing else', () => {
