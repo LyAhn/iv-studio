@@ -2,6 +2,15 @@
 // version's once, until it's dismissed; Settings → Updates lists the last few versions'.
 export const NEWS = [
   {
+    version: '1.1.16',
+    items: [
+      { text: 'Local AI in the chat: pick it beside Claude Code, Codex and Hermes and the chat runs on a model in your own Ollama, free and on your PC. It has IV Studio’s everyday tools and the same Allow cards.' },
+      { text: 'Create remembers your last setup: it opens the way you left it or last ran it. + New starts over.' },
+      { text: 'Create templates: Save as template keeps a setup under a name (the prompt and files only if you want), and Templates fills the form from one. On Video and Image.' },
+      { text: 'The live preview says when a render started with the switch off, instead of a confusing message about KJNodes.' }
+    ]
+  },
+  {
     version: '1.1.15',
     items: [
       { text: 'IV Hivemind: click the IV logo at the top left to open it. IV Studio knows the profile you picked in Hivemind, its chat reads your IV memory, and work can be handed between IV Studio, IV Outreach and IV Signal.' },
