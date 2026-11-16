@@ -109,7 +109,7 @@ ok('the medium the idea asks for replaces a written Live-action', () => {
   assert.equal(keepIdeaMedium(CLEAN, 'Tess waits at a bus stop in the rain'), CLEAN)
 })
 ok('references: keeping a person-picture’s setting is caught; a new scene is not', () => {
-  // the prompt behind Matt's 2026-11-03 "it's just doing first frame": the queen photographed at Giza
+  // a real failing prompt ("it's just doing first frame"): the queen photographed at Giza
   const ref = (summary, kept) => `subject_definitions:\n<Subject 1> is the young woman in <Picture 1>, with dark bobbed hair and a tan dress with a turquoise collar.\n\nsummary:\n[reference generation] ${summary}\n\nretention_analysis:\n<Subject 1> (appears in [Shot 1]): fully_preserved - ${kept}\n\ndetailed_description:\nLive-action, cinematic.\n[Shot 1] <Subject 1> dances.\n\noverall_soundscape:\nWind.`
   const opts = { mode: 'reference', seconds: 5, media: [{ kind: 'picture', file: 'queen.png' }] }
   const kept = lintPrompt(ref('The queen from <Picture 1> dances. Her appearance, costume, and setting are fully preserved as she spins.', 'dark bobbed hair, tan dress, turquoise collar'), opts).find((x) => x.code === 'reference-keeps-place')
@@ -121,7 +121,7 @@ ok('references: keeping a person-picture’s setting is caught; a new scene is n
   assert.ok(!codes(ref('The queen walks through a neon street. Her identity, wardrobe, and accessories are fully preserved as defined by the picture; the scene’s setting, lighting, and camera motion are new per idea.', 'identity, dark hair, linen dress'), opts).includes('reference-keeps-place'))
 })
 ok('references: shots set in the picture’s own backdrop are sent back, unless the idea asks for it', () => {
-  // the 8B writer's draft on Matt's queen picture: "No place is preserved", then [Shot 1] between two pyramids
+  // the 8B writer's draft on the queen picture: "No place is preserved", then [Shot 1] between two pyramids
   const draft = (shot1) => ({ subjects: [{ definition: 'the queen in <Picture 1>', backdrop: 'Pyramids, the Sphinx, desert sand, tourists, clear blue sky' }], style: 'Live-action, cinematic.', shots: [{ start_seconds: 0, description: shot1 }, { start_seconds: 3, description: 'She walks under neon signs in the rain.' }] })
   assert.deepEqual(backdropInShots(draft('The queen stands between two pyramids under a clear sky.'), 'The queen walks through a rainy neon-lit city street at night.'), ['pyramid'])
   assert.deepEqual(backdropInShots(draft('The queen steps out of a taxi into the rain.'), 'The queen walks through a rainy neon-lit city street at night.'), [])

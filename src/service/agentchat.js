@@ -1,4 +1,4 @@
-// A chat with the person's own Claude Code, Codex or Hermes inside IV Studio (docs/superpowers/specs/2026-11-10-agent-chat-design.md):
+// A chat with the person's own Claude Code, Codex or Hermes inside IV Studio:
 // like adding IV Studio to Claude Desktop or Codex as an MCP server, but in the app. Every IV Studio tool, nothing
 // else; anything that deletes, costs money, installs or changes Settings waits for the person's Allow (server.js
 // askPerson, chatAsk). One headless turn per message, continuing the agent's own session.

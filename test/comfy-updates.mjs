@@ -206,7 +206,7 @@ try {
     await assert.rejects(undo(comfy, { snapshot: 'snap1', snapshotCopy: copy }, { comfyRoot: tmp(), up: async () => false }), /Start ComfyUI first/)
   })
 
-  await ok('Manager’s answers per pack, as Matthew’s ComfyUI gave them on 2026-11-06', () => {
+  await ok('Manager’s answers per pack, as a real ComfyUI gave them on 2026-11-06', () => {
     assert.equal(resultOf('x', 'skip').status, 'current')
     assert.equal(resultOf('comfyui', 'success-stable-v0.44.1').status, 'updated')
     const plain = resultOf('ComfyUI-IV-Studio', 'Path not found: F:\\ComfyUI\\custom_nodes\\ComfyUI-IV-Studio')

@@ -1,5 +1,5 @@
-// The person's own Claude Code or Codex making something inside IV Studio (the Dashboard's "Let Claude Code make it";
-// docs/superpowers/specs/2026-11-10-agent-run-design.md). The agent runs headless on the person's existing login, in an
+// The person's own Claude Code or Codex making something inside IV Studio (the Dashboard's "Let Claude Code make it").
+// The agent runs headless on the person's existing login, in an
 // empty folder, with no tools but IV Studio's own MCP server, which in an agent run refuses anything that deletes,
 // installs, trains or spends (agentGuard). One run at a time; its jobs are cancelled on Stop.
 import { spawn } from 'node:child_process'

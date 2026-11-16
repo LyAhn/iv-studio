@@ -4,7 +4,8 @@
 import fs from 'node:fs'
 import { buildPrompt, checkPrompt } from '../src/service/graph.js'
 
-const W = (process.env.IV_STUDIO_WORKFLOWS || 'D:/H3Characters/_workflows').replace(/[\/]?$/, '/')
+if (!process.env.IV_STUDIO_WORKFLOWS) { console.log('skip: set IV_STUDIO_WORKFLOWS to the folder with the GUI exports'); process.exit(0) }
+const W = process.env.IV_STUDIO_WORKFLOWS.replace(/[\/]?$/, '/')
 const template = JSON.parse(fs.readFileSync('resources/workflows/iv_studio_api.json', 'utf8'))
 const meta = JSON.parse(fs.readFileSync('resources/workflows/iv_studio_api.groups.json', 'utf8'))
 const states = JSON.parse(fs.readFileSync(W + 'struct_states.json', 'utf8'))
