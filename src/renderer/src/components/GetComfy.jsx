@@ -117,7 +117,7 @@ export default function GetComfy({ notify, recheck }) {
           </button>
         )}
         {!build.ok && (
-          <button className="link-btn" onClick={() => window.dispatchEvent(new CustomEvent('iv:go', { detail: 'cloud' }))}>
+          <button className="link-btn" onClick={() => window.dispatchEvent(new CustomEvent('iv:go', { detail: { page: 'cloud' } }))}>
             Render in the cloud instead
           </button>
         )}

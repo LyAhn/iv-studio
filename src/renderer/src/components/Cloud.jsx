@@ -352,15 +352,21 @@ export default function Cloud({ notify, recheck, setup, info }) {
   const [busy, setBusy] = useState(null)
   const [log, setLog] = useState([])
   const [wake, setWake] = useState(null)
+  const [failed, setFailed] = useState(null)
   const logEl = useRef(null)
 
   const progress = useSetupProgress(st?.setup)
+  // a failed status read shows its message and Try again (it used to leave the page blank)
   const refresh = () =>
-    window.ivstudio.cloud.status().then((s) => {
-      setSt(s)
-      if (s.cloud?.gpu) setGpu(s.cloud.gpu)
-      if (s.cloud?.idleSeconds) setIdle(s.cloud.idleSeconds)
-    })
+    window.ivstudio.cloud
+      .status()
+      .then((s) => {
+        setSt(s)
+        setFailed(null)
+        if (s.cloud?.gpu) setGpu(s.cloud.gpu)
+        if (s.cloud?.idleSeconds) setIdle(s.cloud.idleSeconds)
+      })
+      .catch((err) => setFailed(err?.message || String(err)))
 
   // the cloud wizard changed things
   useEffect(() => {
@@ -405,7 +411,24 @@ export default function Cloud({ notify, recheck, setup, info }) {
     })
   }
 
-  if (!st) return null
+  if (!st)
+    return (
+      <div className="cloud">
+        <Stage effect="dream" art="cloud" title="Cloud" kicker="Your own GPU · by the second" />
+        {failed ? (
+          <section className="group">
+            <div className="group-body">
+              <p className="small">The Cloud page couldn’t load: {failed}</p>
+              <button className="btn btn-small" onClick={() => (setFailed(null), refresh())}>
+                Try again
+              </button>
+            </div>
+          </section>
+        ) : (
+          <p className="small dim">Loading…</p>
+        )}
+      </div>
+    )
   const chosen = st.gpus.find((g) => g.id === gpu)
   const runpod = st.provider === 'runpod'
   const comfyCloud = st.provider === 'comfycloud'

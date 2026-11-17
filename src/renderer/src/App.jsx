@@ -382,6 +382,9 @@ export default function App() {
   // Go to a page from outside App's props (an iv:go event): the page, its sidebar half, and Create's switch and
   // mode (which reach Create and Image through the iv:learn event, once they've opened).
   const learnGo = (to) => {
+    // a bare page name ('cloud') is a page too: reading .page off a string set the page to nothing (a blank page)
+    if (typeof to === 'string') to = { page: to }
+    if (!to?.page) return
     switchSection(to.section || 'video')
     if (to.create) pickCreateKind(to.create)
     setPage(to.page)
