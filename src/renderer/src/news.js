@@ -2,6 +2,12 @@
 // version's once, until it's dismissed; Settings → Updates lists the last few versions'.
 export const NEWS = [
   {
+    version: '1.1.17',
+    items: [
+      { text: 'Fixed: Render in the cloud instead (in Check my PC, without an NVIDIA card) opened a blank page. It opens the Cloud page now.' }
+    ]
+  },
+  {
     version: '1.1.16',
     items: [
       { text: 'Local AI in the chat: pick it beside Claude Code, Codex and Hermes and the chat runs on a model in your own Ollama, free and on your PC. It has IV Studio’s everyday tools and the same Allow cards.' },
