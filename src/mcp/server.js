@@ -35,10 +35,12 @@ import { EditGen, GEN_KINDS } from '../service/editgen'
 import { Productions } from '../service/productions'
 import { Reels } from '../service/reel'
 import { MusicVideos, MV_ASPECTS, MV_CAST, MV_REF_KINDS, MV_REFS, MV_SCENE_REFS } from '../service/musicvideo'
+import { Keyframes, KF_ASPECTS, KF_JOINS, KF_SOUNDS } from '../service/keyframes'
+import { KEYFRAME_MAX } from '../service/plan'
 import { Cutouts } from '../service/cutout'
 import { Reframes } from '../service/reframe'
 import { MediaTools } from '../service/media'
-import { applyFinishSpeed, applySpeed, savedSpeed, SPEED_IDS, SPEEDS } from '../service/speed'
+import { applyFinishSpeed, applySaved, savedPreviewMp, savedSpeed, SPEED_IDS, SPEEDS } from '../service/speed'
 import { comfyFolders, contentDir, dataLocation, readSettings, resourcesDir, videosFolderOf, writerOf, writeSettings } from '../service/paths'
 import { H3_TERMS_NEEDED, setH3Gate, termsAccepted } from '../service/terms'
 import { ASPECTS, FRAME_GEN_FPS, MODES } from '../service/plan'
@@ -107,6 +109,7 @@ setLlmSource(() => {
 const studio = new Studio({ dataDir: DATA, resourcesDir: resourcesDir(), comfyUrl: readSettings(BASE).comfyUrl, models: readSettings(BASE).models })
 // step pictures follow the window's Live preview switch
 studio.livePreview = () => !!readSettings(BASE).livePreview
+studio.previewSize = () => savedPreviewMp(readSettings(BASE))
 const server = new McpServer({ name: 'iv-studio', version: '0.1.0' }, { instructions: INSTRUCTIONS })
 // Codex runs only tools marked read-only when its approvals are off (issue #44): mark every tool that only looks
 const registerTool = server.registerTool.bind(server)
@@ -362,10 +365,10 @@ tool('undo_comfy_update', "Undo the last update_comfy (or the Setup screen's Upd
 tool('list_characters', 'Character presets (LoRA, strength, trigger word).', {}, () => studio.characters())
 tool('list_projects', 'Projects in the IV Studio library, newest first.', {}, () => studio.listProjects())
 tool('plan_render', 'Validate a request and resolve size, frames, duration, seeds and the finished size, without rendering.', { ...request, finish: z.object(finish).partial().optional() }, ({ finish: f, ...r }) => {
-  const req = applySpeed(r, savedSpeed(readSettings(BASE)))
+  const req = applySaved(r, readSettings(BASE))
   return studio.planRender(req, applyFinishSpeed(f || {}, req.speed))
 })
-tool('get_speeds', "The speed presets (Quality, Balanced, Fast, Low memory): what each sets for previews and the finish, what it trades, rough times measured on an RTX 4090, and which one is saved in Settings → Your PC (Check my PC picks it from the graphics card). Pass speed to generate_previews, plan_render or finish_candidate to use another.", {}, () => ({ saved: savedSpeed(readSettings(BASE)), speeds: SPEED_IDS.map((id) => ({ id, ...SPEEDS[id] })) }))
+tool('get_speeds', "The speed presets (Quality, Balanced, Fast, Low memory): what each sets for previews and the finish, what it trades, rough times measured on an RTX 4090, and which one is saved in Settings → Your PC (Check my PC picks it from the graphics card). Pass speed to generate_previews, plan_render or finish_candidate to use another. firstRenders: the preview size saved in Settings → Your PC → First renders (null: each page's own); it fills any render that names no megapixels, before the speed preset does.", {}, () => ({ saved: savedSpeed(readSettings(BASE)), firstRenders: savedPreviewMp(readSettings(BASE)), speeds: SPEED_IDS.map((id) => ({ id, ...SPEEDS[id] })) }))
 // The prompt checker (src/service/lint.js) for a request: its context is the request's own mode, length and media.
 const checkRequest = (r) => {
   const ch = r.character && r.character !== 'none' ? studio.characters().find((c) => c.id === r.character) : null
@@ -391,7 +394,7 @@ tool('start_batch', `Queue a batch of shots to render on this PC (H3, free) whil
   const jobs = []
   let projectId = null
   for (const [i, r] of asks.entries()) {
-    const job = await studio.generatePreviews({ ...applySpeed(r, savedSpeed(readSettings(BASE))), ...(projectId ? { projectId } : { projectName: name }) })
+    const job = await studio.generatePreviews({ ...applySaved(r, readSettings(BASE)), ...(projectId ? { projectId } : { projectName: name }) })
     projectId = projectId || job.projectId
     jobs.push({ jobId: job.id, prompt: r.prompt, label: shots[i].label || null })
   }
@@ -431,7 +434,7 @@ tool('generate_previews', 'Start preview candidates (takes). Returns a job at on
   if (readSettings(BASE).target !== 'cloud') await voices.release()
   // a continue shot started here hunts takes and gets the full finish, like one made in the window
   if (args.mode === 'continue' && args.continueFull === undefined) args.continueFull = true
-  return studio.generatePreviews(applySpeed(args, savedSpeed(readSettings(BASE))))
+  return studio.generatePreviews(applySaved(args, readSettings(BASE)))
 })
 tool('finish_candidate', "Finish one preview candidate (2 MP pass, then DLSS 5 with optional RTX 2x and frame generation, or SeedVR2 with enhancer seedvr2) from its recorded settings. Reuses the candidate's saved latent. A Seedance take: way seedance (a draft only) renders it again at 1080p on the person's Comfy.org credits (price_shot with jobId gives the price; pass confirm_cost after they agree); way local finishes it free on this PC, with refiner seedvr2 (the default: SeedVR2 to resolution 1080 or 1440, keeps faces, about 4 minutes), dlss (DLSS 5 to the same size, about 15 s, adds a little skin texture) or h3 (H3 refines it at megapixels, strength light or medium, then DLSS 5; faces shift a little; useLora adds the character's LoRA); way take uses it as it is.", { jobId: z.string().describe('The previews job id'), ...finish, way: z.enum(['seedance', 'local', 'take']).optional().describe('Seedance takes only'), refiner: z.enum(['seedvr2', 'dlss', 'h3', 'h3seedvr2']).optional().describe('way local: seedvr2 (default, cleanest), dlss (DLSS 5, quickest), h3 (H3 pass then DLSS 5) or h3seedvr2 (H3 pass then SeedVR2 to resolution; follow the enhanceJob of the finish job)'), resolution: z.union([z.literal(1080), z.literal(1440)]).optional().describe('way local, seedvr2, dlss or h3seedvr2: the short side'), strength: z.union([z.enum(['light', 'medium']), z.number().min(0.05).max(0.5)]).optional().describe('way local, h3 or h3seedvr2: light (0.1), medium (0.2) or a number 0.05-0.5; above 0.2 faces change clearly'), detail: z.number().min(0).max(1).optional().describe('way local, seedvr2 or h3seedvr2: added detail, 0 (default) to about 0.3'), useLora: z.boolean().optional().describe('way local, h3'), confirm_cost: z.number().optional() }, async ({ confirm_cost, ...args }) => {
   const source = studio.getJob(args.jobId)
@@ -538,7 +541,7 @@ tool('make_shot', "One step from a plain-words idea to previews of a text shot: 
   const errors = blocking(checkRequest({ ...shot, prompt }))
   if (errors.length) throw new Error(`The written prompt still has ${errors.length} problem${errors.length > 1 ? 's' : ''}: ${errors.map((f) => f.message).join(' | ')} Try once more, or describe the idea differently.`)
   if (s.target !== 'cloud') await voices.release()
-  const job = await studio.generatePreviews(applySpeed({ ...shot, prompt, ...(name ? { projectName: name } : {}), ...(speed ? { speed } : {}) }, savedSpeed(s)))
+  const job = await studio.generatePreviews(applySaved({ ...shot, prompt, ...(name ? { projectName: name } : {}), ...(speed ? { speed } : {}) }, s))
   return { ...job, prompt }
 })
 tool('write_shots_from_story', 'Split a short story into sequence shots and write each one so they join as one continuous take (the writer chosen in Settings: local, Claude Code or Codex).', {
@@ -1067,6 +1070,76 @@ tool('assemble_music_video', 'Put a music video together as a new edit: the fini
   id: z.string(),
   name: z.string().optional()
 }, ({ id, name }) => musicVideos.assemble(id, { name }))
+// Keyframes (keyframes.js): pictures in order become one video moving from each to the next
+const keyframes = new Keyframes({ dataDir: DATA, studio, edits })
+const kfOut = (v) => ({
+  ...v,
+  jobs: undefined,
+  jobLog: undefined,
+  moveSet: undefined,
+  moves: v.moves.map((m) => ({
+    index: m.index,
+    key: m.key,
+    from: m.from.id,
+    to: m.to.id,
+    seconds: m.seconds,
+    line: m.line,
+    loopBack: m.loopBack,
+    ...(m.state ? { previews: m.state.previews && { id: m.state.previews.id, status: m.state.previews.status, takes: (m.state.previews.outputs || []).filter((o) => o.kind === 'preview').map((o) => ({ candidate: o.candidate, path: o.path })) }, finish: m.state.finish && { id: m.state.finish.id, status: m.state.finish.status }, clip: m.state.clip?.path || null, finished: m.state.fresh, changed: m.state.changed, ready: m.state.ready } : {})
+  })),
+  take: v.take && { seconds: v.take.seconds, positions: v.take.positions, previews: v.take.state.previews && { id: v.take.state.previews.id, status: v.take.state.previews.status, takes: (v.take.state.previews.outputs || []).filter((o) => o.kind === 'preview').map((o) => ({ candidate: o.candidate, path: o.path })) }, finish: v.take.state.finish && { id: v.take.state.finish.id, status: v.take.state.finish.status }, clip: v.take.state.clip?.path || null, finished: v.take.state.fresh, changed: v.take.state.changed }
+})
+tool('list_keyframes', 'The keyframes videos (Workflows → Keyframes): id, name, how many pictures, whether it loops.', {}, () => keyframes.list())
+tool('create_keyframes', `Make one video from pictures in order: it moves from each picture to the next, and with loop back to the first. How it renders (join): onetake (up to ${KEYFRAME_MAX} pictures in one H3 shot of up to 15 s, no joins), carried (a chain: each move continues the one before and ends on its picture, so the motion carries across), plain (each move its own shot, joined in Edit), or auto (one take when it fits, else carried). Then render_keyframes (hunt), finish_keyframes (finish the picked take), and assemble_keyframes. Renders run on this PC's ComfyUI, free.`, {
+  pictures: z.array(z.string()).min(2).describe('Picture files on this PC, in order'),
+  name: z.string().optional(),
+  idea: z.string().optional().describe('A sentence or two for the whole video: the setting, the motion, the camera'),
+  join: z.enum(KF_JOINS).default('auto'),
+  loop: z.boolean().default(false),
+  pace: z.number().min(2).max(15).default(4).describe('Seconds each move takes, unless a move sets its own'),
+  aspect: z.enum(KF_ASPECTS).default('16:9'),
+  song: z.string().optional().describe('A sound file to play over it (its moves\' own sound is muted)')
+}, ({ song, ...args }) => {
+  const k = keyframes.create({ ...args, ...(song ? { song: { file: song } } : {}) })
+  return keyframes.refresh(k.id).then(kfOut)
+})
+tool('get_keyframes', 'A keyframes video: its pictures, how it renders (mode), each move (or the one take) with its takes and whether it is finished, and the total length.', { id: z.string() }, async ({ id }) => kfOut(await keyframes.refresh(id)))
+tool('set_keyframes', 'Change a keyframes video. Any of: name, idea, join, loop, pace, aspect, sound (song, h3 = their own sound, silent), song (a sound file, or "" for none); addPictures (files), removePictures (picture ids), order (every picture id in the new order); move: { key (from get_keyframes), seconds, line }.', {
+  id: z.string(),
+  name: z.string().optional(),
+  idea: z.string().optional(),
+  join: z.enum(KF_JOINS).optional(),
+  loop: z.boolean().optional(),
+  pace: z.number().min(2).max(15).optional(),
+  aspect: z.enum(KF_ASPECTS).optional(),
+  sound: z.enum(KF_SOUNDS).optional(),
+  song: z.string().optional(),
+  addPictures: z.array(z.string()).optional(),
+  removePictures: z.array(z.string()).optional(),
+  order: z.array(z.string()).optional(),
+  move: z.object({ key: z.string(), seconds: z.number().min(2).max(15).nullable().optional(), line: z.string().optional() }).optional()
+}, async ({ id, song, addPictures, removePictures, order, ...patch }) => {
+  if (addPictures?.length) keyframes.addPictures(id, addPictures)
+  for (const p of removePictures || []) keyframes.removePicture(id, p)
+  if (order) keyframes.reorder(id, order)
+  if (song !== undefined) keyframes.setSong(id, song ? { file: song } : null)
+  if (Object.keys(patch).length) keyframes.save(id, patch)
+  return kfOut(await keyframes.refresh(id))
+})
+tool('render_keyframes', 'Hunt takes on this PC (free). move: the move to hunt (ignored for a one take). all: true hunts everything that can start now (a carried chain only its next move, since each continues the one before). Returns the job, or the jobs started.', {
+  id: z.string(),
+  move: z.number().int().min(0).default(0),
+  all: z.boolean().default(false),
+  seed: z.number().int().optional(),
+  speed: z.string().optional()
+}, ({ id, move, all, ...opts }) => (all ? keyframes.huntAll(id, opts) : keyframes.hunt(id, move, opts)))
+tool('finish_keyframes', 'Finish the picked take (candidate 1-3) of a move, or of the one take. A carried chain finishes each move at its own size so the next can continue from it. Returns the job; poll get_job.', {
+  id: z.string(),
+  move: z.number().int().min(0).default(0),
+  candidate: z.number().int().min(1).default(1),
+  speed: z.string().optional()
+}, ({ id, move, candidate, speed }) => keyframes.finish(id, move, { candidate, speed }))
+tool('assemble_keyframes', 'Put a finished keyframes video in a new edit: the video on V1, and the song on A1 if it has one. Export it with export_edit.', { id: z.string(), name: z.string().optional() }, ({ id, name }) => keyframes.assemble(id, { name }))
 tool('export_edit', `Render the whole edit to one MP4 (H.264 + AAC) in Videos\\IV Studio\\Edits, or outDir. Returns at once; follow with get_edit_export. The export runs inside this MCP server, so it stops if the server stops.`, {
   editId: z.string(),
   outDir: z.string().optional()

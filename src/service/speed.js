@@ -127,6 +127,24 @@ export function applyFinishSpeed(finish, id, caps = {}) {
   return out
 }
 
+// The first render's size (the takes a hunt makes before one is finished). Settings → Your PC → First renders saves one
+// for the whole app; null leaves it to each page (the speed preset where it has one, else 0.4 MP).
+export const PREVIEW_SIZES = [0.3, 0.4, 0.6, 0.8]
+export const isPreviewSize = (mp) => mp !== null && mp !== undefined && mp !== '' && PREVIEW_SIZES.includes(Number(mp))
+export function savedPreviewMp(settings = {}) {
+  return isPreviewSize(settings?.previewMp) ? Number(settings.previewMp) : null
+}
+// A render request with the saved first-render size where it names no size of its own (a size given always wins,
+// and the saved one wins over a speed preset's).
+export function withPreviewSize(req, size) {
+  if (!req || !isPreviewSize(size) || (req.megapixels !== undefined && req.megapixels !== null)) return req
+  return { ...req, megapixels: Number(size) }
+}
+// Both saved defaults at once, as the MCP server fills an agent's request: the first-render size, then the speed.
+export function applySaved(req, settings = {}) {
+  return applySpeed(withPreviewSize(req, savedPreviewMp(settings)), savedSpeed(settings))
+}
+
 // "about 2 min" for the estimates shown beside each preset
 export function roughTime(seconds) {
   if (seconds < 75) return `about ${Math.max(10, Math.round(seconds / 10) * 10)} s`

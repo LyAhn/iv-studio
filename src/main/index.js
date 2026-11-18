@@ -1,4 +1,5 @@
-import { workspaceHost } from '../service/iv-workspace-host.js'
+import { workspaceHost } from '../service/iv-workspace-host.js'
+
 import { CreateMemory } from '../service/createmem'
 import { receiveStudio } from '../service/iv-workspace-import.js'
 import { isHarness } from '../service/harness.js'
@@ -22,7 +23,7 @@ import { RunPod, GPUS as RUNPOD_GPUS, VOLUME_PER_GB_MONTH } from '../service/run
 import { CloudPrep, cloudCatalog, roomOnVolume } from '../service/cloudprep'
 import { CloudVoiceEngine } from '../service/cloudvoice'
 import { MODEL_GROUPS, recommend, scanHardware } from '../service/hardware'
-import { isSpeed } from '../service/speed'
+import { isSpeed, savedPreviewMp } from '../service/speed'
 import { comboOptions } from '../service/setup'
 import { managerReq } from '../service/comfyupdate'
 import { comfyHome, comfyProcesses, comfyUp, findComfyElsewhere, findLaunchers, isComfyFolder, isLocalUrl, launch as launchComfy, launcherFor, launchersIn, noteLaunch, recentLaunch, sameComfy, stopComfy, waitDown, waitUp } from '../service/comfylauncher'
@@ -33,6 +34,7 @@ import { EditGen } from '../service/editgen'
 import { Productions } from '../service/productions'
 import { Reels } from '../service/reel'
 import { MusicVideos } from '../service/musicvideo'
+import { Keyframes } from '../service/keyframes'
 import { Cutouts } from '../service/cutout'
 import { Reframes } from '../service/reframe'
 import { offeredFx, CLIP_FX, FreefieldApps } from '../service/freefield'
@@ -306,6 +308,8 @@ function makeStudio() {
       : { comfyUrl: s.comfyUrl }
   studio = new Studio({ dataDir: DATA, resourcesDir: resourcesDir(path.join(app.getAppPath(), 'resources')), models: s.models, ...cloud })
   studio.livePreview = () => !!readSettings(BASE).livePreview
+  // Settings → Your PC → First renders: the size every hunt uses when it names none of its own
+  studio.previewSize = () => savedPreviewMp(readSettings(BASE))
   if (onRunPod) studio.comfy.waker = () => runpodWake?.()
   // the person's own cloud: model lists without a GPU, and a render's models and LoRAs put there first (cloudprep.js)
   if (s.target === 'cloud' && (onRunPod || ((s.cloudProvider || 'modal') === 'modal' && s.cloud?.url))) {
@@ -2886,6 +2890,25 @@ app.whenReady().then(() => {
   handle('mv:addRef', (id, ref) => (musicVideos.addRef(id, ref), musicVideos.view(id)))
   handle('mv:updateRef', (id, refId, patch) => (musicVideos.updateRef(id, refId, patch), musicVideos.view(id)))
   handle('mv:removeRef', (id, refId) => (musicVideos.removeRef(id, refId), musicVideos.view(id)))
+  // Keyframes: pictures in order become one video moving from each to the next (Workflows → Keyframes; keyframes.js)
+  const keyframes = new Keyframes({ dataDir: DATA, studio: () => studio, edits })
+  handle('kf:list', () => keyframes.list())
+  handle('kf:get', (id) => keyframes.refresh(id))
+  handle('kf:create', async (opts) => keyframes.refresh(keyframes.create(opts).id))
+  handle('kf:save', async (id, patch) => (keyframes.save(id, patch), keyframes.refresh(id)))
+  handle('kf:addPictures', async (id, files) => (keyframes.addPictures(id, files), keyframes.refresh(id)))
+  handle('kf:removePicture', async (id, pid) => (keyframes.removePicture(id, pid), keyframes.refresh(id)))
+  handle('kf:reorder', async (id, order) => (keyframes.reorder(id, order), keyframes.refresh(id)))
+  handle('kf:setSong', async (id, song) => (keyframes.setSong(id, song), keyframes.refresh(id)))
+  handle('kf:delete', (id) => keyframes.delete(id))
+  handle('kf:hunt', (id, index, opts) => track(keyframes.hunt(id, index, opts)))
+  handle('kf:huntAll', async (id, opts) => {
+    const r = await keyframes.huntAll(id, opts)
+    for (const s of r.started) pending.add(s.jobId)
+    return r
+  })
+  handle('kf:finish', (id, index, opts) => track(keyframes.finish(id, index, opts)))
+  handle('kf:assemble', (id, opts) => keyframes.assemble(id, opts))
   handle('projects:get', (id) => ({ project: studio.getProject(id), jobs: studio.listJobs(id) }))
   handle('projects:rename', (id, name) => studio.renameProject(id, name))
   handle('projects:delete', (id) => studio.deleteProject(id))

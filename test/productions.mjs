@@ -359,7 +359,7 @@ ok('a film keeps its picture model and speed, and its shots and finishes follow 
   const dir = tmp()
   const films = new Productions({ dataDir: dir, studio: () => ({ characters: () => [] }) })
   const p = films.create({ name: 'Settings' })
-  assert.deepEqual(films.speedFor(films.get(p.id)), { megapixels: 0.4 }, 'no setting: the old 0.4 MP previews')
+  assert.deepEqual(films.speedFor(films.get(p.id)), {}, 'no setting: the app default (the saved first-render size, else 0.4 MP)')
   films.update(p.id, { settings: { picture: 'qwen21', speed: 'balanced' } })
   assert.deepEqual(films.get(p.id).settings, { picture: 'qwen21', speed: 'balanced', video: 'h3' })
   assert.deepEqual(films.speedFor(films.get(p.id)), { speed: 'balanced' })

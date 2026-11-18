@@ -1,7 +1,7 @@
 // Speed presets (src/service/speed.js): each preset's values, Check my PC's pick, and how a request and a
 // finish are filled in from a preset.  node test/speed.mjs
 import assert from 'node:assert/strict'
-import { applyFinishSpeed, applySpeed, finishFor, previewFor, roughTime, savedSpeed, speedForTier, speedOf, SPEED_IDS, SPEEDS } from '../src/service/speed.js'
+import { applyFinishSpeed, applySaved, applySpeed, finishFor, isPreviewSize, PREVIEW_SIZES, previewFor, roughTime, savedPreviewMp, savedSpeed, speedForTier, speedOf, SPEED_IDS, SPEEDS, withPreviewSize } from '../src/service/speed.js'
 import { planFinish, planPreviews } from '../src/service/plan.js'
 
 let n = 0
@@ -95,6 +95,38 @@ ok('a preset plans: the preview graph gets its size, steps and takes, the plan k
   const q = planPreviews({ prompt: '{char} waves.', character: 'tess' }, tess)
   assert.equal(q.request.speed, null)
   assert.equal(q.values['501.megapixels'], 0.4)
+})
+
+ok('the saved first-render size fills a request that names no size, before any speed preset', () => {
+  assert.deepEqual(PREVIEW_SIZES, [0.3, 0.4, 0.6, 0.8])
+  assert.equal(savedPreviewMp({}), null)
+  assert.equal(savedPreviewMp({ previewMp: null }), null)
+  assert.equal(savedPreviewMp({ previewMp: 0.6 }), 0.6)
+  assert.equal(savedPreviewMp({ previewMp: '0.8' }), 0.8)
+  assert.equal(savedPreviewMp({ previewMp: 0.5 }), null)
+  assert.equal(isPreviewSize(0), false)
+  // nothing saved: the request is untouched
+  const r = { prompt: 'x' }
+  assert.equal(withPreviewSize(r, null), r)
+  // a size of its own always wins
+  assert.equal(withPreviewSize({ prompt: 'x', megapixels: 0.3 }, 0.8).megapixels, 0.3)
+  assert.equal(withPreviewSize({ prompt: 'x' }, 0.8).megapixels, 0.8)
+  // the saved size beats a speed preset's preview size; the preset still sets steps and takes
+  const a = applySpeed(withPreviewSize({ prompt: 'x', speed: 'low' }, 0.6))
+  assert.equal(a.megapixels, 0.6)
+  assert.equal(a.steps, 4)
+  assert.equal(a.previews, 1)
+  // as the MCP server fills an agent's request
+  const b = applySaved({ prompt: 'x' }, { speed: 'fast', previewMp: 0.8 })
+  assert.deepEqual([b.megapixels, b.steps, b.previews, b.speed], [0.8, 4, 2, 'fast'])
+  const c = applySaved({ prompt: 'x' }, { speed: 'fast' })
+  assert.equal(c.megapixels, 0.3)
+  const d = applySaved({ prompt: 'x', megapixels: 0.4 }, { speed: 'fast', previewMp: 0.8 })
+  assert.equal(d.megapixels, 0.4)
+  // and the graph gets it
+  const tess = [{ id: 'tess', name: 'Tess', trigger: 't3ss4', lora: 'tess.safetensors', loraStrength: 0.8 }]
+  const q = planPreviews(withPreviewSize({ prompt: '{char} waves.', character: 'tess' }, 0.8), tess)
+  assert.equal(q.values['501.megapixels'], 0.8)
 })
 
 ok('rough times read naturally', () => {

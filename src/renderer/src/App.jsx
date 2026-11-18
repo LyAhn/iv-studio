@@ -27,6 +27,7 @@ import { ShinobiList, ShinobiProject } from './components/Shinobi'
 import Replace from './components/Replace'
 import Reel from './components/Reel'
 import MusicVideo from './components/MusicVideo'
+import Keyframes from './components/Keyframes'
 import Effects from './components/Effects'
 import Workflows from './components/Workflows'
 import { LinesPage, VoicesPage } from './components/Voices'
@@ -76,7 +77,7 @@ const SECTIONS = {
     ['settings', 'Settings']
   ]
 }
-const SUBPAGES = { settings: ['setup'], library: ['shot'], projects: ['project'], edits: ['edit'], characters: ['character'], workflows: ['sequences', 'sequence', 'shinobi', 'shinobi-film', 'replace', 'reel', 'musicvideo', 'effects', 'sizzle', 'sizzle-project', 'rebuild', 'rebuild-project'] }
+const SUBPAGES = { settings: ['setup'], library: ['shot'], projects: ['project'], edits: ['edit'], characters: ['character'], workflows: ['sequences', 'sequence', 'shinobi', 'shinobi-film', 'replace', 'reel', 'musicvideo', 'keyframes', 'effects', 'sizzle', 'sizzle-project', 'rebuild', 'rebuild-project'] }
 const savedSection = () => {
   try {
     return localStorage.getItem('iv.section') === 'audio' ? 'audio' : 'video'
@@ -576,6 +577,7 @@ export default function App() {
         {page === 'replace' && <Replace {...ctx} />}
         {page === 'reel' && <Reel {...ctx} />}
         {page === 'musicvideo' && <MusicVideo {...ctx} />}
+        {page === 'keyframes' && <Keyframes {...ctx} />}
         {page === 'effects' && <Effects {...ctx} />}
         {page === 'shinobi' && <ShinobiList {...ctx} />}
         {page === 'sizzle' && <SizzleList {...ctx} />}

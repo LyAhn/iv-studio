@@ -11,8 +11,8 @@ import ffmpegStatic from 'ffmpeg-ffprobe-static'
 import { Comfy } from './comfy.js'
 import { probe } from './media.js'
 import { buildPrompt, checkPrompt } from './graph.js'
-import { planFinish, planPreviews } from './plan.js'
-import { applyFinishSpeed, applySpeed } from './speed.js'
+import { applyPatch, planFinish, planPreviews } from './plan.js'
+import { applyFinishSpeed, applySpeed, withPreviewSize } from './speed.js'
 import { adaptGraph, capabilities, LIVE_NODE, withLivePreview, withLivePreviewAll } from './remote.js'
 import { Cast, resolveMentions, withCast } from './cast.js'
 import { contextIrGraph, fromContextIr, writeHarness, writeLocal, writeStoryLocal } from './prompter.js'
@@ -408,7 +408,7 @@ export class Studio {
       return { resolved: { ...p.resolved, model: 'LTX 2.5' }, groups: [], notes: [], mode: p.request.mode, engine: LTX, finish: { width: p.resolved.finalWidth, height: p.resolved.finalHeight, fps: p.resolved.fps, frames: p.resolved.frames, seconds: p.resolved.seconds } }
     }
     const members = this.cast.members()
-    const { request, notes } = resolveMentions(withCast(applySpeed(given), members), members)
+    const { request, notes } = resolveMentions(withCast(applySpeed(withPreviewSize(given, this.previewSize?.())), members), members)
     const plan = planPreviews(request, this.characters())
     const out = { resolved: plan.resolved, groups: plan.groups, notes, mode: request.mode }
     if (finish !== false) out.finish = planFinish(plan, { candidate: 1, ...(finish || {}) }).resolved
@@ -431,7 +431,8 @@ export class Studio {
     if (input.engine === LTX) return this.ltxPreviews(input)
     const { projectId, projectName, characterOverride, members: extra = [], ...given } = input
     // a speed preset (speed.js) fills the preview size, steps and takes the request leaves out
-    const asked = applySpeed(given)
+    // and the saved first-render size (Settings → Your PC) where the request names none
+    const asked = applySpeed(withPreviewSize(given, this.previewSize?.()))
     // @ mentions (cast.js): the picked character's becomes {char}; anyone or anywhere else with a picture is attached.
     // extra: members only this shot can mention (a music video's references: people, products, places, things)
     const members = [...this.cast.members(), ...extra.filter((m) => m?.handle && m.picture)]
@@ -742,7 +743,7 @@ export class Studio {
   }
 
   async submit({ kind, project, plan, name, parent, previewPlan }) {
-    let prompt = buildPrompt(this.template, this.meta, plan.groups, plan.values)
+    let prompt = applyPatch(buildPrompt(this.template, this.meta, plan.groups, plan.values), plan.patch)
     // live previews of each step (remote.js), on this PC only: the cloud has no websocket to send them over
     // (a finish shows its 2 MP pass, a little larger)
     if (['previews', 'finish'].includes(kind) && this.livePreviewOn() && !this.comfy.remote && (await this.capabilities()).livePreview) {
@@ -1280,7 +1281,7 @@ export class Studio {
     const base = { prompt: sh.prompt, character: s.character, aspect: s.aspect, seconds: s.shotSeconds, steps: s.steps, seed: seed ?? s.seed + index * 100, extraLoras: s.loras || [] }
     const request = prev
       ? { ...base, mode: 'continue', media: [{ kind: 'video', file: prev.raw.path }], megapixels: s.megapixels, overlapFrames: 22 }
-      : { ...base, mode: sh.mode || 'text', media: sh.media || [], megapixels: 0.4, previews: 3 }
+      : { ...base, mode: sh.mode || 'text', media: sh.media || [], previews: 3 }
     const j = await this.generatePreviews({ projectId: s.projectId, ...request })
     s.shotJobs[sh.id] = { previews: j.id, finish: null, key: this.shotKey(s, index, prev?.raw?.path || null) }
     return this.sequenceJob(s, j)

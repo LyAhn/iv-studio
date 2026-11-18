@@ -15,7 +15,7 @@ import { pretty as refmodTitle, RefModIcon, RefModPicker } from './CharacterSour
 import { lintSeedance } from '../../../service/seedlint'
 import { confirmSpend, dollars } from './ComfyAccount'
 import { SpeedRow } from './Speed'
-import { finishFor, previewFor, savedSpeed, speedOf } from '../../../service/speed'
+import { finishFor, previewFor, savedPreviewMp, savedSpeed, speedOf } from '../../../service/speed'
 import Starters from './Starters'
 import { CinemaChips, CinemaPicker, PromptTools, useSlate } from './CraftKit'
 import { withSetups, withoutSetups } from '../../../service/setuptext'
@@ -151,7 +151,9 @@ export default function Create({ setup, characters, notify, openShot, go, incomi
       // the saved speed preset (Settings → Your PC, picked by Check my PC) sets a fresh form's size, steps and takes
       const id = savedSpeed(s)
       setSavedId(id)
-      setForm((f) => (f.projectId || f.megapixels !== 0.4 || f.steps !== 8 || f.previews !== 3 ? f : { ...f, ...previewFor(id) }))
+      // and the saved first-render size (Settings → Your PC → First renders) its preview size
+      const mp = savedPreviewMp(s)
+      setForm((f) => (f.projectId || f.megapixels !== 0.4 || f.steps !== 8 || f.previews !== 3 ? f : { ...f, ...previewFor(id), ...(mp ? { megapixels: mp } : {}) }))
     }, () => {})
   }, [])
   // faces: a character's own picture, else its ready-made picture from the catalog (as on Characters)

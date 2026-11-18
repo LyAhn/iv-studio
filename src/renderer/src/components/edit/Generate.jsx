@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { FirstRenders } from '../Speed'
 import { media } from '../../media'
 import { fileUrl } from './model'
 
@@ -230,6 +231,7 @@ export function GenDialog({ edit, spec, characters, notify, onStart, onClose }) 
         </div>
         <textarea className="prompt" rows={6} value={prompt} placeholder="The H3 prompt. Write {char} where the character goes." onChange={(e) => setPrompt(e.target.value)} />
 
+        {(kind === 'bridge' || kind === 'fill') && <FirstRenders compact label="Previews" />}
         <div className="gen-foot">
           <span className="small dim">{kind === 'bridge' || kind === 'fill' ? 'Three previews to pick from, then the one you pick is finished.' : 'Renders on your GPU for a few minutes.'} It shows on the timeline while it works.</span>
           <button className="btn btn-primary" disabled={!prompt.trim() || !!busy || !prep} onClick={go}>

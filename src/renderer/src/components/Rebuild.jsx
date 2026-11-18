@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { FirstRenders } from './Speed'
 import Hero from './Hero'
 import Stage from './Stage'
 import { ToolShelf, ShelfTile, Step, WorkflowNeeds } from './FlowKit'
@@ -271,6 +272,7 @@ export function RebuildProject({ rebuildId, notify, go, openEdit }) {
                 </div>
               ))}
             </div>
+            {h3.some((s) => !s.take || ['error', 'cancelled'].includes(s.take.status)) && <FirstRenders compact label="Takes" />}
             <div className="row-actions">
               {h3.some((s) => !s.take || ['error', 'cancelled'].includes(s.take.status)) && (
                 <button className="btn btn-primary" disabled={!!busy} onClick={() => act('Starting the renders', () => B().makeShots(r.id))}>

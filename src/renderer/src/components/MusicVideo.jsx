@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { media } from '../media'
 import { Progress } from './Shot'
 import Failure from './Failure'
+import { FirstRenders } from './Speed'
 import Stage from './Stage'
 import { ToolShelf, ShelfTile, WorkflowNeeds } from './FlowKit'
 import { fileUrl } from './edit/model'
@@ -292,6 +293,7 @@ function Editor({ id, back, notify, characters = [], jobs: live = {}, openEdit }
                 </button>
               ))}
             </div>
+            <FirstRenders compact label="Takes" />
           </section>
           <CastCard v={v} characters={characters} faceOf={faceOf} run={run} id={id} />
           <RefsCard v={v} run={run} id={id} />

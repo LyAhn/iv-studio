@@ -217,7 +217,6 @@ export class EditGen {
         extraLoras,
         seconds,
         aspect: spec.aspect || nearestAspect(m0.width, m0.height),
-        megapixels: 0.4,
         previews: 3,
         seed,
         media: [{ kind: 'picture', file: first.file, width: first.width, height: first.height }, ...(last ? [{ kind: 'picture', file: last.file, width: last.width, height: last.height }] : [])]

@@ -13,7 +13,7 @@ import { AccountCard } from './ComfyAccount'
 import Credits from './Credits'
 import { openH3Terms, reportMisuse, useH3Terms } from './H3Terms'
 import { SAFEGUARDS_URL } from '../../../service/terms'
-import { SpeedCards } from './Speed'
+import { FirstRenders, SpeedCards } from './Speed'
 import { savedSpeed } from '../../../service/speed'
 import { PrivacyCard } from './Privacy'
 import { AgentRows, useAgentSetup } from './AgentSetup'
@@ -97,6 +97,9 @@ function PcCard({ n, settings, setSettings, notify }) {
       </div>
       <SetField label="Speed" hint="How Create starts each shot: preview size, steps and takes, and the finish. Smaller cards need the quicker presets; any shot can still change it.">
         <SpeedCards value={speed} onPick={pickSpeed} recommended={settings.shotPrefs?.speed} />
+      </SetField>
+      <SetField label="First renders" hint="How big the takes are that every hunt makes before you finish one: Create, Sequences, films, music videos, keyframes, sizzles, rebuilds and Generate in Edit. Auto uses the speed above. The same picker sits on each of those pages.">
+        <FirstRenders compact />
       </SetField>
     </SetCard>
   )

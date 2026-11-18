@@ -8,6 +8,21 @@ export const MODES = {
   continue: { group: 'mode4', label: 'Continue a video', model: 'fl2va' }
 }
 
+// Keyframes' one take (H3 Multishot's H3Keyframes): this many pictures at most in one shot
+export const KEYFRAME_MAX = 6
+
+// A node swapped or extended after the graph is built (plan.patch): { id: { class_type, remove: [inputs], inputs } }.
+export function applyPatch(graph, patch) {
+  if (!patch) return graph
+  for (const [id, change] of Object.entries(patch)) {
+    if (!(id in graph)) continue
+    const inputs = { ...graph[id].inputs }
+    for (const k of change.remove || []) delete inputs[k]
+    graph[id] = { ...graph[id], ...(change.class_type ? { class_type: change.class_type } : {}), inputs: { ...inputs, ...(change.inputs || {}) } }
+  }
+  return graph
+}
+
 export const ASPECTS = {
   '16:9': '16:9 (Widescreen)',
   '9:16': '9:16 (Portrait Widescreen)',
@@ -89,7 +104,13 @@ export function planPreviews(request, characters) {
   const refmods = refChar ? [{ name: refChar.refmod, strength: refChar.strength ?? 1, copies: 1 }, ...r.refmods.filter((m) => m.name !== refChar.refmod)] : r.refmods
   const pictures = r.media.filter((m) => m.kind === 'picture')
   const videos = r.media.filter((m) => m.kind === 'video')
-  if (r.mode === 'frames' && (pictures.length < 1 || pictures.length > 2)) errors.push('First / last frame needs 1 picture (first frame) or 2 (first and last).')
+  // keyframes: { positions } (Keyframes, one take): 2 to 6 pictures anchored at those frames by H3 Multishot's H3Keyframes
+  const keyframes = r.keyframes && r.mode === 'frames' ? r.keyframes : null
+  if (keyframes) {
+    if (pictures.length < 2 || pictures.length > KEYFRAME_MAX) errors.push(`A one-take keyframes shot needs 2 to ${KEYFRAME_MAX} pictures.`)
+    if (!Array.isArray(keyframes.positions) || keyframes.positions.length !== pictures.length) errors.push('Give one keyframe position per picture.')
+  } else if (r.mode === 'frames' && (pictures.length < 1 || pictures.length > 2)) errors.push('First / last frame needs 1 picture (first frame) or 2 (first and last).')
+  if (r.mode === 'continue' && pictures.length > 1) errors.push('Continue a video takes one picture at most: where the new part ends.')
   if (r.mode === 'reference' && !r.media.length && !refmods.length) errors.push('Reference to video needs at least one picture, video or audio reference, or a RefMod.')
   if (r.mode === 'continue' && videos.length !== 1) errors.push('Continue a video needs exactly one source video.')
   if (r.mode === 'continue' && ![5, 22, 39, 56].includes(r.overlapFrames)) errors.push('Overlap frames must be 5, 22, 39 or 56.')
@@ -126,6 +147,11 @@ export function planPreviews(request, characters) {
   if (mediaNode) values[`${mediaNode}.media_state`] = JSON.stringify(r.media.map(mediaItem))
   if (r.mode === 'continue') values['604'] = r.overlapFrames
   if (r.voiceLine) values['801.audio'] = r.voiceLine
+  // a continued shot with a picture ends on it (Keyframes' carried motion): the picture is H3's last frame
+  if (r.mode === 'continue' && pictures.length === 1) values['611.last_frame'] = ['603', 0]
+  // one take through several keyframes: node 204 (H3's first/last frame) becomes H3 Multishot's H3Keyframes, fed by
+  // the pictures in order at their frame positions; same outputs (conditioning, latent), so the rest of the graph stays
+  const patch = keyframes ? { 204: { class_type: 'H3Keyframes', remove: ['first_frame', 'last_frame'], inputs: { positions: keyframes.positions.map((n) => String(Math.round(n))).join(', '), ...Object.fromEntries(pictures.map((_, k) => [`image_${k + 1}`, ['203', k]])) } } } : null
   if (refmods.length) {
     for (let k = 1; k <= 8; k++) {
       const m = refmods[k - 1]
@@ -139,6 +165,7 @@ export function planPreviews(request, characters) {
     request: r,
     groups,
     values,
+    ...(patch ? { patch } : {}),
     resolved: { ...size, frames, seconds: +(frames / 24).toFixed(3), fps: 24, previews, model: mode.model, seeds: [r.seed, r.seed + 1000, r.seed + 2000].slice(0, previews) }
   }
 }
@@ -196,6 +223,7 @@ export function planFinish(previewPlan, finish) {
   const scale = f.enhancer === 'seedvr2' ? f.enhanceResolution / Math.min(base.width, base.height) : f.upscale2x ? 2 : 1
   const frames = previewPlan.resolved.frames
   return {
+    ...(previewPlan.patch ? { patch: previewPlan.patch } : {}),
     finish: f,
     groups,
     values,

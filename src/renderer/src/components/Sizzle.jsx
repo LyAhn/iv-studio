@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { FirstRenders } from './Speed'
 import Hero from './Hero'
 import Stage from './Stage'
 import { ToolShelf, ShelfTile, Step, WorkflowNeeds } from './FlowKit'
@@ -219,6 +220,7 @@ export function SizzleProject({ sizzleId, notify, go, openShinobi }) {
               </p>
             )}
             {s.plan.notes && <p className="small dim">{s.plan.notes}</p>}
+            {['planning', 'approved'].includes(s.status) && <FirstRenders compact label="H3 shots’ takes" />}
             <div className="row-actions">
               {s.status === 'planning' && (
                 <button className="btn btn-primary" disabled={!!busy} onClick={() => act('Approving', () => Z().approve(s.id).then(() => Z().get(s.id)))}>

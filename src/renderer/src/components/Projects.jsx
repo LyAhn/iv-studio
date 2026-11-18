@@ -13,6 +13,7 @@ import { LoraPicker } from './Loras'
 import { askAgent, useAgentName } from './ChatPanel'
 import { CinemaChips, CinemaPicker, LookbookBox, PromptTools, useSlate } from './CraftKit'
 import { SPEEDS } from '../../../service/speed'
+import { FirstRenders, useFirstRenders } from './Speed'
 
 // Projects: a short film made step by step (src/service/productions.js). The list of films, and one film as a
 // six-step wizard: Idea, Story, Cast and places, Storyboard, Film it, Watch. The storyboard is the heart of it:
@@ -748,6 +749,8 @@ function Cast({ v, act, characters, notify, go, setStep }) {
 // Speed: Create's presets for the previews and the finish; "Each shot's own" keeps 0.4 MP previews and a 2 MP finish.
 function FilmSettings({ v, act }) {
   const [fams, setFams] = useState(null)
+  // the app-wide first-render size (Settings → Your PC → First renders) beats a preset's preview size
+  const [firstMp] = useFirstRenders()
   useEffect(() => {
     let live = true
     window.ivstudio.images.status().then((s) => live && setFams(s?.families || []), () => live && setFams([]))
@@ -778,14 +781,15 @@ function FilmSettings({ v, act }) {
       <label className="small" title="Preview size, steps and the finish for every shot of this film: Create's speed presets">
         <span className="dim">Speed</span>
         <select value={s.speed || ''} onChange={(e) => save({ speed: e.target.value || null }, 'Saved. It applies to the next takes you film.')} aria-label="Speed for this film">
-          <option value="">Each shot: 0.4 MP, finish 2 MP</option>
+          <option value="">Each shot: {firstMp || 0.4} MP, finish 2 MP</option>
           {Object.entries(SPEEDS).map(([id, x]) => (
             <option key={id} value={id}>
-              {x.label}: {x.previewMp} MP, {x.steps} steps, finish {x.finalMp} MP{x.upscale2x ? ' + 2×' : ''}
+              {x.label}: {firstMp || x.previewMp} MP, {x.steps} steps, finish {x.finalMp} MP{x.upscale2x ? ' + 2×' : ''}
             </option>
           ))}
         </select>
       </label>
+      <FirstRenders compact label="First takes" />
       <label className="small" title="The video model that films every shot. MiniMax H3 follows the prompt closely and keeps characters with their LoRAs and faces; LTX 2.5 is quicker and suits cartoons and animation, keeping people the same through each shot's sketch.">
         <span className="dim">Video</span>
         <select value={s.video || 'h3'} onChange={(e) => save({ video: e.target.value }, e.target.value === 'ltx' ? 'LTX 2.5 films this film now. Write the prompts again for it (Cast and places, or each shot).' : 'MiniMax H3 films this film now.')} aria-label="Video model for this film">

@@ -143,7 +143,7 @@ export class Sizzles {
       assets.music = { songId: song.id, status: song.status }
     }
     for (const sc of s.plan.scenes.filter((x) => x.kind === 'h3' && !assets[x.id])) {
-      const job = await this.studio.generatePreviews({ mode: 'text', prompt: sc.prompt, character: sc.character || 'none', aspect: s.format, megapixels: 0.4, seconds: sc.seconds, previews: 1, seed: Math.floor(Math.random() * 1e6), steps: 8, projectName: `Sizzle · ${s.name} · ${sc.id}` })
+      const job = await this.studio.generatePreviews({ mode: 'text', prompt: sc.prompt, character: sc.character || 'none', aspect: s.format, seconds: sc.seconds, previews: 1, seed: Math.floor(Math.random() * 1e6), steps: 8, projectName: `Sizzle · ${s.name} · ${sc.id}` })
       assets[sc.id] = { kind: 'h3', previewJob: job.id, status: job.status }
     }
     s = this.get(id)

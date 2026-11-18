@@ -45,6 +45,13 @@ export const WORKFLOWS = [
     needs: ['H3 on this PC', 'A song (make one on Audio → Music)']
   },
   {
+    page: 'keyframes',
+    name: 'Keyframes',
+    tag: 'Pictures, brought to life in one moving video',
+    about: 'Put pictures in order: a photoshoot, poses, product angles. IV Studio makes one smooth video that moves from each picture to the next, and loops back to the first if you like, in one take or as a chain of moves.',
+    needs: ['H3 on this PC', 'Your pictures']
+  },
+  {
     page: 'shinobi',
     name: 'Shinobi',
     tag: 'Edits your agent cuts',

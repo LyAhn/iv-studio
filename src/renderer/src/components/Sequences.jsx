@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { media } from '../media'
 import { Progress } from './Shot'
 import Failure from './Failure'
+import { FirstRenders } from './Speed'
 import Hero from './Hero'
 import Stage from './Stage'
 import { ToolShelf, ShelfTile, Step, Choices, WorkflowNeeds } from './FlowKit'
@@ -717,7 +718,10 @@ export function SequenceEditor({ sequenceId, characters, notify, go, jobs: live,
             {takeRunning ? 'Rendering…' : view.versions.some((v) => v.kind === 'take') ? 'Render another take' : 'Render take'}
           </button>
         ) : (
-          shots.map((s, i) => <ShotRow key={s.id} seqId={sequenceId} i={i} shot={s} state={view.shots[i]} live={live} onStart={onStart} notify={notify} flush={flush} />)
+          <>
+            <FirstRenders compact label="Shot 1’s takes" />
+            {shots.map((s, i) => <ShotRow key={s.id} seqId={sequenceId} i={i} shot={s} state={view.shots[i]} live={live} onStart={onStart} notify={notify} flush={flush} />)}
+          </>
         )}
       </Step>
 

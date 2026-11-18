@@ -427,7 +427,7 @@ export class Rebuilds {
       if (t && !['error', 'cancelled'].includes(t.status)) continue
       const f = r.frames[p.index]
       const media = [{ kind: 'picture', file: f.first }, ...(p.h3.useLast ? [{ kind: 'picture', file: f.last }] : [])]
-      const job = await this.studio.generatePreviews({ mode: 'frames', prompt: p.prompt, character: p.character || 'none', aspect, megapixels: 0.4, seconds: p.h3.seconds, previews: r.plan.swap ? 3 : 2, seed: Math.floor(Math.random() * 1e6), steps: 8, media, projectName: `Rebuild · ${r.name} · shot ${p.index}` })
+      const job = await this.studio.generatePreviews({ mode: 'frames', prompt: p.prompt, character: p.character || 'none', aspect, seconds: p.h3.seconds, previews: r.plan.swap ? 3 : 2, seed: Math.floor(Math.random() * 1e6), steps: 8, media, projectName: `Rebuild · ${r.name} · shot ${p.index}` })
       r = this.get(id)
       r.takes[p.index] = { previewJob: job.id, status: job.status, previews: [], candidate: null, finishJob: null, final: null, error: null }
       r.status = 'rendering'

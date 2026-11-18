@@ -846,9 +846,10 @@ export class Productions {
   madeUp(p, name) {
     return (p.cast || []).find((c) => !c.characterId && first(c.as) === first(name)) || null
   }
-  // A film shot's preview settings: the film's speed preset (Create's presets), else the old 0.4 MP default.
+  // A film shot's preview settings: the film's speed preset (Create's presets), else the app's default (the saved
+  // first-render size, else 0.4 MP).
   speedFor(p) {
-    return isSpeed(p?.settings?.speed) ? { speed: p.settings.speed } : { megapixels: 0.4 }
+    return isSpeed(p?.settings?.speed) ? { speed: p.settings.speed } : {}
   }
   // What someone wears in this film (their cast entry's outfit, found by role or by the preset's name), or ''.
   outfitOf(p, name) {
