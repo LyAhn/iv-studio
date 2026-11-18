@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { finishFor, previewFor, SPEED_IDS, SPEEDS } from '../../../service/speed'
 import { createPortal } from 'react-dom'
 import Hero from './Hero'
@@ -184,8 +184,91 @@ export default function Welcome({ onClose, go, notify, first }) {
   }
 
   skipRef.current = skip
-  const next = () => setStep(STEPS[Math.min(STEPS.length - 1, at + 1)][0])
-  const back = () => setStep(STEPS[Math.max(0, at - 1)][0])
+  // A step whose sections don't all fit the window shows them a page at a time (as many as fit on each), so the
+  // panel never has to scroll: Next and Back walk the pages first, then the steps.
+  const stepBody = useRef(null)
+  const [pages, setPages] = useState([[0]]) // section indexes on each page
+  const [part, setPart] = useState(0)
+  const fromEnd = useRef(false) // Back into a step: open on its last page
+  const packedFor = useRef(step) // the step the pages were packed for: a new step opens on its first (or last) page
+  const anchor = useRef(0) // the first section on the page being shown, so a repack keeps showing it
+  const sizes = useRef(new WeakMap()) // each section's height as the last packing left it
+  const watcher = useRef(null)
+  const [, setFit] = useState(0) // bumped on resize or when a folded section opens, to pack the pages again
+  useEffect(() => {
+    const again = () => setFit((n) => n + 1)
+    window.addEventListener('resize', again)
+    document.addEventListener('toggle', again, true) // <details> opening or closing (toggle doesn't bubble)
+    // once the step has slid in: mid-slide it hangs lower, so the first packing can leave it a list too short
+    const settled = (e) => e.target === stepBody.current && again()
+    document.addEventListener('animationend', settled)
+    // a section that changes size by itself (its own data arriving): only a shown one whose height isn't the one
+    // the last packing left it at, so the packing's own changes don't set it off again
+    const watch = window.ResizeObserver && new ResizeObserver((all) => all.some(({ target: k }) => k.style.display !== 'none' && Math.abs(k.getBoundingClientRect().height - (sizes.current.get(k) ?? -1)) > 1) && again())
+    watcher.current = watch
+    return () => (window.removeEventListener('resize', again), document.removeEventListener('toggle', again, true), document.removeEventListener('animationend', settled), watch?.disconnect())
+  }, [])
+  useLayoutEffect(() => {
+    const el = stepBody.current
+    const scroller = body.current
+    if (!el || !scroller) return
+    const kids = [...el.children]
+    const sections = kids.filter((k) => k.matches('.create-step')) // a section, or a folded one (Fold)
+    // measured at full size: every section shown, the nice-to-haves back and the long lists at full length
+    const optional = [...el.querySelectorAll('[data-optional]')]
+    const fits = [...el.querySelectorAll('[data-fit]')].map((f) => [f, f.scrollTop])
+    for (const k of kids) k.style.display = ''
+    for (const o of optional) o.style.display = ''
+    for (const [f] of fits) f.style.maxHeight = ''
+    let packed = [kids.map((_, i) => i)]
+    if (sections.length > 1 && sections.length === kids.length) {
+      const pad = parseFloat(getComputedStyle(scroller).paddingBottom) || 0
+      // offsetTop, not the bounding box: the step slides in (wel-text-up), and mid-slide it sits lower
+      const room = scroller.clientHeight - (el.offsetTop - scroller.offsetTop) - pad
+      const gap = parseFloat(getComputedStyle(el).rowGap) || 0
+      packed = []
+      let used = 0
+      kids.forEach((k, i) => {
+        const h = k.getBoundingClientRect().height
+        if (packed.length && used + gap + h <= room) packed[packed.length - 1].push(i), (used += gap + h)
+        else packed.push([i]), (used = h)
+      })
+    }
+    const same = packed.length === pages.length && packed.every((p, i) => p.join() === pages[i].join())
+    const fresh = packedFor.current !== step
+    packedFor.current = step
+    const held = packed.findIndex((p) => p.includes(anchor.current))
+    const now = fresh ? (fromEnd.current ? packed.length - 1 : 0) : held >= 0 ? held : Math.min(part, packed.length - 1)
+    fromEnd.current = false
+    anchor.current = packed[now][0]
+    kids.forEach((k, i) => (k.style.display = packed[now].includes(i) ? '' : 'none'))
+    // still too tall for the window: a long list scrolls in its own box, then the nice-to-haves go, then the list
+    // gets shorter still
+    const over = () => scroller.scrollHeight - scroller.clientHeight
+    const shrink = (least) => {
+      for (const [f] of fits) if (over() > 0) f.style.maxHeight = `${Math.max(least, f.clientHeight - over())}px`
+    }
+    shrink(200)
+    for (const o of optional) if (over() > 0) o.style.display = 'none'
+    shrink(110)
+    for (const [f, top] of fits) f.scrollTop = top
+    for (const k of kids) sizes.current.set(k, k.getBoundingClientRect().height)
+    watcher.current?.disconnect()
+    for (const k of kids) watcher.current?.observe(k)
+    if (!same) setPages(packed)
+    if (now !== part) setPart(now)
+  })
+  const lastPart = part >= pages.length - 1
+  const goStep = (id, end = false) => {
+    fromEnd.current = end
+    setStep(id)
+  }
+  const toPart = (n) => {
+    anchor.current = pages[n][0]
+    setPart(n)
+  }
+  const next = () => (lastPart ? goStep(STEPS[Math.min(STEPS.length - 1, at + 1)][0]) : toPart(part + 1))
+  const back = () => (part > 0 ? toPart(part - 1) : goStep(STEPS[Math.max(0, at - 1)][0], true))
   const canNext = step !== 'pc' || scanned
 
   const titles = {
@@ -219,7 +302,7 @@ export default function Welcome({ onClose, go, notify, first }) {
             ))}
           </ol>
 
-          <div className="welcome-body" key={`b-${step}`}>
+          <div className="welcome-body" key={`b-${step}`} ref={stepBody}>
             {step === 'hello' && <Hello level={level} knows={knows} />}
             {step === 'you' && <MakeItYours isNew={isNew} names={names} setNames={setNames} agents={agents} simple={simple} words={words} hc={hc} contrast={contrast} accent={accent} tint={tint} />}
             {step === 'pc' && (scanned && rec ? <YourPc rec={rec} scan={data.scan} isNew={isNew} /> : <Scan rows={rows} shown={shown} error={error} retry={scan} />)}
@@ -232,9 +315,10 @@ export default function Welcome({ onClose, go, notify, first }) {
         <footer className="welcome-foot">
           <span className="mono small dim">
             Step {at + 1} of {STEPS.length}
+            {pages.length > 1 && ` · page ${part + 1} of ${pages.length}`}
           </span>
           <div className="welcome-foot-btns">
-            {at > 0 && (
+            {(at > 0 || part > 0) && (
               <button className="btn" onClick={back}>
                 ← Back
               </button>
@@ -246,7 +330,7 @@ export default function Welcome({ onClose, go, notify, first }) {
             )}
             {step === 'you' && (
               <button className="btn btn-primary" onClick={next}>
-                Check my PC →
+                {lastPart ? 'Check my PC →' : 'Next →'}
               </button>
             )}
             {step !== 'hello' && step !== 'you' && step !== 'done' && (
@@ -254,7 +338,12 @@ export default function Welcome({ onClose, go, notify, first }) {
                 {step === 'pc' && !scanned ? 'Checking…' : 'Next →'}
               </button>
             )}
-            {step === 'done' && (
+            {step === 'done' && !lastPart && (
+              <button className="btn btn-primary" onClick={next}>
+                Next →
+              </button>
+            )}
+            {step === 'done' && lastPart && (
               <>
                 {/* the cloud: straight into its own setup wizard (and its page behind it) */}
                 {way !== 'local' && (
@@ -431,8 +520,10 @@ function Scan({ rows, shown, error, retry }) {
           })}
         </ul>
       )}
-      <h3 className="wel-while mono small">While it looks: what IV Studio does</h3>
-      <div className="wel-what">
+      <h3 className="wel-while mono small" data-optional>
+        While it looks: what IV Studio does
+      </h3>
+      <div className="wel-what" data-optional>
         {WHAT.map(([t, d], i) => (
           <div key={t} className="wel-what-card" style={{ '--i': i }}>
             <h3>{t}</h3>
@@ -717,10 +808,10 @@ function Get({ isNew, rec, way, pick, setPick, packs, setPacks, installs, scan, 
   return (
     <section className="block create-step">
       <StepHead n={stepN('get')} title="What to download" sub={isNew ? 'IV Studio picked what you need. Press the button and it downloads in the background while you start.' : 'The ones for how you’ll work are ticked. Each is checked against its published fingerprint.'} />
-      {!isNew && <p className="wel-lede">IV Studio uses the ComfyUI already on this PC, wherever it is (the Desktop app, or a portable ComfyUI on another drive), or gets one for you. These download into that ComfyUI’s models folder, so they go on its drive.</p>}
+      {!isNew && <p className="wel-lede" data-optional>IV Studio uses the ComfyUI already on this PC, wherever it is (the Desktop app, or a portable ComfyUI on another drive), or gets one for you. These download into that ComfyUI’s models folder, so they go on its drive.</p>}
       {!installs.modelsKnown && <FindComfy installs={installs} startComfy={startComfy} comfyStarting={comfyStarting} rescan={rescan} notify={notify} />}
       {allHere && (
-        <div className="wel-allhere">
+        <div className="wel-allhere" data-optional>
           <Icon name="check" />
           <p>Everything this way of working needs is already on this PC. Tick anything extra you’d like.</p>
         </div>
@@ -728,7 +819,7 @@ function Get({ isNew, rec, way, pick, setPick, packs, setPacks, installs, scan, 
       {isNew && <p className="wel-lede">{chosen.length ? `${chosen.length === 1 ? 'One download' : `${chosen.length} downloads`}, ${gbs(bytes)} in all. You can keep using IV Studio while they come in.` : 'Nothing more to download for now.'}</p>}
       <details className="wel-dl-fold" open={!isNew}>
         <summary className="mono small">{isNew ? 'See or change the list' : 'The list'}</summary>
-      <ul className="wel-downloads">
+      <ul className="wel-downloads" data-fit>
         {groups.map((g) => (
           <li key={g.id} className={`${g.have ? 'have' : ''} ${pick.includes(g.id) ? 'on' : ''}`}>
             <label>
@@ -776,31 +867,42 @@ function Done({ rec, way, prefs, writer, started, onTour, count, setCount }) {
     ['Downloads', started ? `${gbs(started.bytes)} on the way` : way === 'cloud' ? 'In the cloud' : rec.downloads.some((g) => g.recommended) ? 'Not started' : 'All here']
   ]
   return (
-    <section className="block create-step">
-      <StepHead n={stepN('done')} title="Here’s your setup" sub="Applied when you leave this page." />
-      <dl className="wel-summary">
-        {lines.map(([k, v]) => (
-          <div key={k}>
-            <dt className="mono small">{k}</dt>
-            <dd>{v}</dd>
+    <>
+      <section className="block create-step">
+        <StepHead n={stepN('done')} title="Here’s your setup" sub="Applied when you leave this page." />
+        <dl className="wel-summary">
+          {lines.map(([k, v]) => (
+            <div key={k}>
+              <dt className="mono small">{k}</dt>
+              <dd>{v}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="wel-lede">
+          {way === 'local'
+            ? 'Make your first shot: it opens with an example already written, so you can press Hunt, pick the take you like and finish it. Or write your own.'
+            : 'Set up the cloud first (one sign-in), then make your first shot.'}
+        </p>
+      </section>
+      <section className="block create-step wel-before">
+        <StepHead title="Before you start" sub="The tour, H3’s rules and one question." />
+        {/* the full tour (tours.js full): page by page, and how to get each page's own tour */}
+        <div className="wel-tour">
+          <span className="wel-tour-q" aria-hidden="true">
+            ?
+          </span>
+          <div>
+            <strong>New here? Take the tour</strong>
+            <p className="small dim">Two minutes, page by page, ending on the How it works button every page has. End it any time.</p>
           </div>
-        ))}
-      </dl>
-      <p className="wel-lede">{way === 'local' ? 'Make your first shot: it opens with an example already written, so you can press Hunt, pick the take you like and finish it. Or write your own.' : 'Set up the cloud first (one sign-in), then make your first shot.'}</p>
-      {/* the full tour (tours.js full): page by page, and how to get each page's own tour */}
-      <div className="wel-tour">
-        <span className="wel-tour-q" aria-hidden="true">?</span>
-        <div>
-          <strong>New here? Take the tour</strong>
-          <p className="small dim">Two minutes, page by page, ending on the How it works button every page has. End it any time.</p>
+          <button className="btn" onClick={onTour}>
+            Take the tour →
+          </button>
         </div>
-        <button className="btn" onClick={onTour}>
-          Take the tour →
-        </button>
-      </div>
-      <WelcomeTerms />
-      <UsageAsk on={count} onChange={setCount} />
-    </section>
+        <WelcomeTerms />
+        <UsageAsk on={count} onChange={setCount} />
+      </section>
+    </>
   )
 }
 
