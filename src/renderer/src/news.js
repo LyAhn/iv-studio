@@ -2,6 +2,17 @@
 // version's once, until it's dismissed; Settings → Updates lists the last few versions'.
 export const NEWS = [
   {
+    version: '1.1.18',
+    items: [
+      { text: 'New: Music video (Workflows). Pick a song; IV Studio finds its beat and parts and cuts it into scenes on the bars. Your cast sings and plays along to each scene’s own stretch of the song, and Make the edit lays the finished scenes over the song.' },
+      { text: 'Music video references: add pictures of people, products, places or things, and pick which scenes show them. A product keeps its shape, colours and label.' },
+      { text: 'The welcome wizard fits the window: no more scrolling. A step with a lot in it shows a page at a time.' },
+      { text: 'Fixed: Codex refused IV Studio’s tools when its approvals were off (GitHub #44).' },
+      { text: 'Fixed: a sequence’s story shot count went back to 3 if you left while it was writing (GitHub #43).' },
+      { text: 'Fixed: the infinitevariance.ai link at the bottom of the sidebar could wrap onto two lines (GitHub #42).' }
+    ]
+  },
+  {
     version: '1.1.17',
     items: [
       { text: 'Fixed: Render in the cloud instead (in Check my PC, without an NVIDIA card) opened a blank page. It opens the Cloud page now.' }
