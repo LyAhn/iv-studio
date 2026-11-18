@@ -281,6 +281,10 @@ function StagePop({ stage, names, setStage, staged, previsN, drawing, canPrevis,
   )
 }
 
+// The shot count picked for each sequence's story (by lastingKey), so it outlasts leaving the sequence, also while
+// its shots are being written and the sequence still has the old number of shots (GitHub #43).
+const pickedCounts = new Map()
+
 // A short story -> every shot of a sequence (the writer chosen in Settings; Context IR falls back to the local one).
 // story + onStory: the story kept by the page; lastingKey + onLate as PromptWriter's (GitHub #40).
 export function StoryWriter({ character, shotSeconds, existing, onShots, notify, story: storyProp, onStory, lastingKey = null, onLate = null }) {
@@ -289,7 +293,11 @@ export function StoryWriter({ character, shotSeconds, existing, onShots, notify,
   const [storyLocal, setStoryLocal] = useState('')
   const story = storyProp ?? storyLocal
   const setStory = onStory || setStoryLocal
-  const [count, setCount] = useState(Math.max(2, existing || 3))
+  const [count, setCountNow] = useState(() => (lastingKey && pickedCounts.get(lastingKey)) || Math.max(2, existing || 3))
+  const setCount = (n) => {
+    if (lastingKey) pickedCounts.set(lastingKey, n)
+    setCountNow(n)
+  }
 
   async function write() {
     if (existing && !(await ask({ title: 'Replace your shots?', message: 'The shots you have are replaced with new ones written from the story.', confirm: 'Write new shots', danger: true }))) return
