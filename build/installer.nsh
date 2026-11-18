@@ -43,3 +43,37 @@
     FunctionEnd
   !endif
 !macroend
+
+; An update first runs the old version's uninstaller, which moves every old file out of the install folder. If any
+; file there is in use (an antivirus scan, IV Studio's MCP server started again by Claude Desktop or Codex, an ffmpeg
+; still finishing) it puts the files back and stops with code 2, and the installer used to stop too, with "Failed to
+; uninstall old application files ... : 2" (GitHub #45). Now it closes everything running from the install folder,
+; waits, and tries the old uninstaller once more; if that still can't, it installs over the old files instead of
+; stopping (the old uninstaller has put its files back, so nothing is missing). The two macros replace
+; electron-builder's own check of the uninstaller's result (installUtil.nsh handleUninstallResult).
+!macro ivUninstallCheck
+  ${if} ${Errors}
+    DetailPrint `Uninstall was not successful. Not able to launch uninstaller!`
+  ${elseif} $R0 != 0
+    DetailPrint `The old version's uninstaller stopped (code $R0): something in "$INSTDIR" is in use. Closing what runs from there and trying again.`
+    Push $0
+    nsExec::Exec `"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -C "Get-CimInstance -ClassName Win32_Process | ? {$$_.Path -and $$_.Path.StartsWith('$INSTDIR', 'CurrentCultureIgnoreCase')} | % { Stop-Process -Id $$_.ProcessId -Force }"`
+    Pop $0
+    Pop $0
+    Sleep 2000
+    ClearErrors
+    Push $rootKey_uninstallResult
+    Call uninstallOldVersion
+    ${if} ${Errors}
+    ${orif} $R0 != 0
+      DetailPrint `The old version's files are still in use (code $R0): installing over them.`
+      ClearErrors
+    ${endif}
+  ${endif}
+!macroend
+!macro customUnInstallCheck
+  !insertmacro ivUninstallCheck
+!macroend
+!macro customUnInstallCheckCurrentUser
+  !insertmacro ivUninstallCheck
+!macroend
