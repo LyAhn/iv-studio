@@ -34,6 +34,7 @@ import { Edits, editLength, FORMATS, LOUDNESS } from '../service/edits'
 import { EditGen, GEN_KINDS } from '../service/editgen'
 import { Productions } from '../service/productions'
 import { Reels } from '../service/reel'
+import { MusicVideos, MV_ASPECTS, MV_CAST, MV_REF_KINDS, MV_REFS, MV_SCENE_REFS } from '../service/musicvideo'
 import { Cutouts } from '../service/cutout'
 import { Reframes } from '../service/reframe'
 import { MediaTools } from '../service/media'
@@ -971,6 +972,101 @@ tool('make_reel', `Make a reel: pictures (and video clips), in order, cut to a s
   length: z.number().min(3).optional().describe('At most this many seconds'),
   name: z.string().default('Reel')
 }, (args) => reels.make(args))
+// Music video (musicvideo.js): a song cut into scenes on its bars, each an H3 shot on its own stretch of the song
+const musicVideos = new MusicVideos({ dataDir: DATA, studio, edits })
+// the music video as an agent needs it: the bar lines left out, each scene's jobs as id, status and takes
+const mvOut = (v) => ({
+  ...v,
+  sceneJobs: undefined,
+  jobs: undefined,
+  song: { ...v.song, bars: `${v.song.bars?.length || 0} bars` },
+  scenes: v.scenes.map((s, index) => ({
+    index,
+    id: s.id,
+    start: s.start,
+    end: s.end,
+    seconds: s.seconds,
+    part: s.part,
+    prompt: s.prompt,
+    cast: s.cast,
+    sings: s.sings,
+    refs: s.refs,
+    media: s.media,
+    previews: s.state.previews && { id: s.state.previews.id, status: s.state.previews.status, takes: (s.state.previews.outputs || []).filter((o) => o.kind === 'preview').map((o) => ({ candidate: o.candidate, path: o.path })) },
+    finish: s.state.finish && { id: s.state.finish.id, status: s.state.finish.status },
+    clip: s.state.clip?.path || null,
+    finished: s.state.fresh,
+    changed: s.state.changed
+  }))
+})
+const mvWriter = (request) => {
+  const s = readSettings(BASE)
+  const chosen = s.promptEngine === 'contextir' && !process.env.COMFY_ORG_API_KEY ? 'local' : s.promptEngine || 'local'
+  const w = writerOf({ ...s, promptEngine: chosen })
+  return studio.writePrompt(request, { engine: w.engine, apiKey: process.env.COMFY_ORG_API_KEY || null, model: w.model })
+}
+const castShape = z.array(z.object({ character: z.string().describe('A character id from list_characters'), part: z.string().optional().describe('Their part: lead singer, drums, dancer...'), singer: z.boolean().optional().describe('The one who sings (one at most)') })).max(MV_CAST)
+tool('list_music_videos', 'The music videos (Workflows → Music video): id, name, song, length and scene count.', {}, () => musicVideos.list())
+tool('create_music_video', "Start a music video from a song: IV Studio reads its beat, bars and parts and plans scenes of 2 to 15 s on its bar lines, covering the whole song. Then: set the cast and idea (set_music_video), write the scenes' prompts (write_music_video_prompts, or set them yourself), hunt takes (render_music_video), finish the picked take of each scene (finish_music_video_scene), and put it together (assemble_music_video). Each scene sings or plays along to its own stretch of the song (the song is its voice line), so the singer's mouth follows the words; everyone else's mouth stays closed. Renders run on this PC's ComfyUI, free.", {
+  song: z.string().describe('A sound file on this PC (a song from list_music has a file)'),
+  name: z.string().optional(),
+  idea: z.string().optional().describe('A sentence or two about the whole video; the writer uses it for every scene'),
+  aspect: z.enum(MV_ASPECTS).default('16:9'),
+  cast: castShape.optional()
+}, async ({ song, name, idea = '', aspect, cast = [] }) => mvOut(musicVideos.view((await musicVideos.create({ song, name, idea, aspect, cast })).id)))
+tool('get_music_video', 'A music video with its song map and every scene: its time span, part, prompt, who is in it, whether it sings, its takes and whether it is finished (finished: false and changed: true means it was edited since it was rendered).', { id: z.string() }, async ({ id }) => mvOut(await musicVideos.refresh(id)))
+tool('set_music_video', `Change a music video. Any of: name, idea, aspect, cast (up to ${MV_CAST}: who, their part, one singer); addRefs: references to add (up to ${MV_REFS}: a picture of a person, product, place or thing, with a name and a few words; H3 keeps its look, a product its label); updateRefs, removeRefs (ref ids); scene: { index, prompt, cast (cast indexes in it; null = everyone), sings, refs (ref ids in it, up to ${MV_SCENE_REFS}; they go to H3 as reference pictures and the prompt may name them as @handle), pictures (a first-frame picture; it can't be combined with refs) }; cut: { op split|merge|move, index, steps } (split scene index on the bar nearest its middle, merge it with the next, or move the cut after it by steps bars, negative = earlier); replan: true reads the song again and plans every scene from scratch (prompts and renders of the current scenes are dropped from the plan). Scenes always cover the whole song, 2 to 15 s each.`, {
+  id: z.string(),
+  name: z.string().optional(),
+  idea: z.string().optional(),
+  aspect: z.enum(MV_ASPECTS).optional(),
+  cast: castShape.optional(),
+  addRefs: z.array(z.object({ picture: z.string().describe('A picture file on this PC'), name: z.string().optional(), kind: z.enum(MV_REF_KINDS).default('thing'), description: z.string().optional() })).max(MV_REFS).optional(),
+  updateRefs: z.array(z.object({ id: z.string(), name: z.string().optional(), kind: z.enum(MV_REF_KINDS).optional(), description: z.string().optional() })).optional(),
+  removeRefs: z.array(z.string()).optional(),
+  scene: z.object({ index: z.number().int().min(0), prompt: z.string().optional(), cast: z.array(z.number().int().min(0)).nullable().optional(), sings: z.boolean().optional(), refs: z.array(z.string()).max(MV_SCENE_REFS).optional(), pictures: z.array(z.string()).max(1).optional() }).optional(),
+  cut: z.object({ op: z.enum(['split', 'merge', 'move']), index: z.number().int().min(0), steps: z.number().int().optional() }).optional(),
+  replan: z.boolean().optional()
+}, async ({ id, scene, cut, replan, addRefs, updateRefs, removeRefs, ...patch }) => {
+  if (replan) await musicVideos.map(id, { replan: true })
+  for (const r of addRefs || []) musicVideos.addRef(id, r)
+  for (const { id: refId, ...r } of updateRefs || []) musicVideos.updateRef(id, refId, r)
+  for (const refId of removeRefs || []) musicVideos.removeRef(id, refId)
+  if (Object.keys(patch).length) musicVideos.save(id, patch)
+  if (cut) musicVideos.edit(id, cut)
+  if (scene) {
+    const { index, pictures, ...fields } = scene
+    musicVideos.edit(id, { op: 'set', index, ...fields, ...(pictures ? { media: pictures.map((file) => ({ kind: 'picture', file })) } : {}) })
+  }
+  return mvOut(musicVideos.view(id))
+})
+tool('write_music_video_prompts', "Write the H3 prompts of a music video's scenes with the writer chosen in Settings → Prompt writer: each from a brief of the video's idea, the scene's place in the song, who is in it and who sings. By default every scene without a prompt; scenes: indexes to (re)write; overwrite: rewrite every scene.", {
+  id: z.string(),
+  scenes: z.array(z.number().int().min(0)).optional(),
+  overwrite: z.boolean().default(false)
+}, async ({ id, scenes, overwrite }) => {
+  const r = await musicVideos.writePrompts(id, { only: scenes || null, overwrite }, mvWriter)
+  return { written: r.written, video: mvOut(r.video) }
+})
+tool('render_music_video', "Hunt takes for a music video's scenes on this PC's ComfyUI (free): each scene with its prompt, its lead character (the singer when they sing in it), the others in it as references, and its stretch of the song as the voice line. scenes: indexes (default: every scene with a prompt that isn't finished). One scene returns its job (poll get_job); several return the jobs started. Then finish_music_video_scene with the take you pick.", {
+  id: z.string(),
+  scenes: z.array(z.number().int().min(0)).optional(),
+  seed: z.number().int().optional(),
+  speed: z.string().optional().describe('A speed preset (get_speeds)')
+}, async ({ id, scenes, ...opts }) => {
+  if (scenes?.length === 1) return musicVideos.hunt(id, scenes[0], opts)
+  return musicVideos.huntAll(id, { only: scenes || null, ...opts })
+})
+tool('finish_music_video_scene', "Finish a music video scene's picked take (candidate 1-3 from its previews), keeping its stretch of the song as the sound. Returns the job; poll get_job.", {
+  id: z.string(),
+  scene: z.number().int().min(0),
+  candidate: z.number().int().min(1).default(1),
+  speed: z.string().optional()
+}, ({ id, scene, candidate, speed }) => musicVideos.finish(id, scene, { candidate, speed }))
+tool('assemble_music_video', 'Put a music video together as a new edit: the finished scenes on V1 at their place in the song (their own sound muted), the song on A1. Scenes not finished are left as gaps and listed in missing. Export it with export_edit.', {
+  id: z.string(),
+  name: z.string().optional()
+}, ({ id, name }) => musicVideos.assemble(id, { name }))
 tool('export_edit', `Render the whole edit to one MP4 (H.264 + AAC) in Videos\\IV Studio\\Edits, or outDir. Returns at once; follow with get_edit_export. The export runs inside this MCP server, so it stops if the server stops.`, {
   editId: z.string(),
   outDir: z.string().optional()

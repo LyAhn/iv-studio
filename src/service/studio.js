@@ -429,11 +429,12 @@ export class Studio {
   async generatePreviews(input) {
     if (input.engine === SEEDANCE) return this.seedancePreviews(input)
     if (input.engine === LTX) return this.ltxPreviews(input)
-    const { projectId, projectName, characterOverride, ...given } = input
+    const { projectId, projectName, characterOverride, members: extra = [], ...given } = input
     // a speed preset (speed.js) fills the preview size, steps and takes the request leaves out
     const asked = applySpeed(given)
-    // @ mentions (cast.js): the picked character's becomes {char}; anyone or anywhere else with a picture is attached
-    const members = this.cast.members()
+    // @ mentions (cast.js): the picked character's becomes {char}; anyone or anywhere else with a picture is attached.
+    // extra: members only this shot can mention (a music video's references: people, products, places, things)
+    const members = [...this.cast.members(), ...extra.filter((m) => m?.handle && m.picture)]
     const { request, notes } = resolveMentions(withCast(asked, members), members)
     const unknown = notes.filter((n) => n.level === 'error')
     if (unknown.length) throw new Error(unknown.map((n) => n.message).join(' '))
