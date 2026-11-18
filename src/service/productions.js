@@ -1234,7 +1234,7 @@ export class Productions {
     const entry = this.madeUp(p, role) || { as: role, characterId: null, description: '', face: null }
     const dir = path.join(this.dir, 'faces')
     fs.mkdirSync(dir, { recursive: true })
-    const face = path.join(dir, `${id}_${first(entry.as).toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'face'}_${Date.now()}${path.extname(file).toLowerCase()}`)
+    const face = path.join(dir, `${id}_${first(entry.as).toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'face'}_${Date.now()}_${id6()}${path.extname(file).toLowerCase()}`)
     fs.copyFileSync(file, face)
     const q = this.patch(id, (x) => {
       const old = this.madeUp(x, role)
