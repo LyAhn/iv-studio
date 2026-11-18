@@ -36,6 +36,7 @@ export function pasteMessage(mcp) {
    env: ELECTRON_RUN_AS_NODE=1
    In Claude Code that's: claude mcp add -s user iv-studio -e ELECTRON_RUN_AS_NODE=1 -- "${mcp.command}" "${mcp.args[0]}"
    In Codex: codex mcp add iv-studio --env ELECTRON_RUN_AS_NODE=1 -- "${mcp.command}" "${mcp.args[0]}"
+   In Codex, also add default_tools_approval_mode = "approve" under [mcp_servers.iv-studio] in ~/.codex/config.toml, or Codex refuses IV Studio's tools whenever its approvals are off.
 2. Reload MCP servers if your app needs it, then call the iv-studio tool get_guide and follow it.
 3. Run check_setup and tell me what's ready, then show me IV Studio's start menu (get_menu) so I can pick what to make.`
 }

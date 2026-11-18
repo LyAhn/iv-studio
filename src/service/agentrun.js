@@ -97,6 +97,8 @@ export function claudeArgs({ mcpConfigFile, promptFile, model = '', persist = fa
 // A chat with Codex: `exec` for the first message, `exec resume <thread>` after. Resume takes no --sandbox, -C or
 // --color, so the sandbox is a config value and the folder is the process's own working folder. tool_timeout_sec
 // leaves room for the person to answer an Allow card.
+// default_tools_approval_mode: newer Codex refuses every MCP call it would ask about when approvals are off
+// (issue #44); IV Studio asks for itself (chatAsk, agentGuard).
 export function codexChatArgs({ mcp, model = '', resume = null }) {
   const key = `mcp_servers.${SERVER}`
   return [
@@ -108,6 +110,7 @@ export function codexChatArgs({ mcp, model = '', resume = null }) {
     ...(model ? ['-m', model] : []),
     '-c', 'model_reasoning_effort="medium"',
     '-c', 'approval_policy="never"',
+    '-c', `${key}.default_tools_approval_mode="approve"`,
     '-c', 'sandbox_mode="read-only"',
     '-c', `${key}.command=${tomlString(mcp.command)}`,
     '-c', `${key}.args=${JSON.stringify(mcp.args)}`,
@@ -123,6 +126,9 @@ export function codexChatArgs({ mcp, model = '', resume = null }) {
 const CHAT_INSTALLS = new Set(['install_node_packs', 'update_comfy', 'undo_comfy_update', 'install_ready_character', 'download_lora', 'setup_voices', 'shinobi_setup'])
 const CHAT_SETTINGS = new Set(['set_workflow_model', 'set_lora_family'])
 const CHAT_TRAINING = new Set(['start_training', 'create_character_training', 'make_training_clips'])
+// Tools that only look (no change, no spend): marked readOnlyHint so a person's own Codex runs them even with
+// approvals off (issue #44). check_film_continuity is left out: it saves its notes on the scene.
+export const READ_ONLY_TOOLS = /^(get|list|price|estimate|search|identify|read)_|^(check_setup|check_prompt|check_comfy_updates|comfy_balance|music_status|voice_status|sound_status|picture_tools_status|shinobi_status|shinobi_tools|turnaround_status|effects_list)$/
 // calls that only read, price or write words: fine even while Settings renders on the cloud
 export const CHAT_READS = /^(get|list|check|price|estimate|search|identify|read)_|^(scan_hardware|plan_render|comfy_balance|music_status|voice_status|sound_status|picture_tools_status|shinobi_status|shinobi_tools|effects_list|grab_frame|write_prompt|write_shots_from_story|write_sound|write_film_script|write_film_shot_prompt|free_memory|release_voice_engine|show_in_app)$/
 export function chatAsk(name, args = {}, { settings = {} } = {}) {
@@ -149,6 +155,7 @@ export function codexArgs({ mcp, dir, model = '' }) {
     ...(model ? ['-m', model] : []),
     '-c', 'model_reasoning_effort="medium"',
     '-c', 'approval_policy="never"',
+    '-c', `${key}.default_tools_approval_mode="approve"`,
     '-c', `${key}.command=${tomlString(mcp.command)}`,
     '-c', `${key}.args=${JSON.stringify(mcp.args)}`,
     '-c', `${key}.env=${tomlTable(mcp.env)}`,

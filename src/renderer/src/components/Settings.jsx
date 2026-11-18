@@ -982,7 +982,10 @@ function AgentCard({ n, mcp, settings, setSettings, notify }) {
   const cmd = `"${mcp.command}" "${mcp.args[0]}"`
   const manual = {
     claude: `claude mcp add -s user iv-studio -e ELECTRON_RUN_AS_NODE=1 -- ${cmd}`,
-    codex: `codex mcp add iv-studio --env ELECTRON_RUN_AS_NODE=1 -- ${cmd}`,
+    codex: `codex mcp add iv-studio --env ELECTRON_RUN_AS_NODE=1 -- ${cmd}
+# Then in ~/.codex/config.toml, under [mcp_servers.iv-studio], add the line below, or Codex refuses
+# IV Studio's tools whenever its approvals are off:
+# default_tools_approval_mode = "approve"`,
     json: JSON.stringify({ mcpServers: { 'iv-studio': mcp } }, null, 2)
   }
   async function installSkill() {

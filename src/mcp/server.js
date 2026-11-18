@@ -11,7 +11,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { z } from 'zod'
 import { INSTRUCTIONS, readGuide } from '../service/agent'
-import { agentGuard, chatAsk, startedJobId } from '../service/agentrun'
+import { agentGuard, chatAsk, READ_ONLY_TOOLS, startedJobId } from '../service/agentrun'
 import { TOUR_PAGES, TOURS, placesToShow } from '../renderer/src/tours'
 import { GUIDE_SOURCE, loadGuide } from '../service/h3guide'
 import { blocking, lintPrompt } from '../service/lint'
@@ -107,6 +107,10 @@ const studio = new Studio({ dataDir: DATA, resourcesDir: resourcesDir(), comfyUr
 // step pictures follow the window's Live preview switch
 studio.livePreview = () => !!readSettings(BASE).livePreview
 const server = new McpServer({ name: 'iv-studio', version: '0.1.0' }, { instructions: INSTRUCTIONS })
+// Codex runs only tools marked read-only when its approvals are off (issue #44): mark every tool that only looks
+const registerTool = server.registerTool.bind(server)
+server.registerTool = (name, config, cb) =>
+  registerTool(name, READ_ONLY_TOOLS.test(name) ? { ...config, annotations: { readOnlyHint: true, ...config.annotations } } : config, cb)
 // Where the app puts downloads and exports (Electron's videos folder; this process has no Electron app).
 const VIDEOS = () => videosFolderOf(readSettings(BASE), { incognito: INCOGNITO, dataDir: DATA, videos: path.join(process.env.USERPROFILE || os.homedir(), 'Videos') })
 // Packaged, the ffmpeg binaries sit outside the asar archive.
