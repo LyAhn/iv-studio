@@ -2,7 +2,7 @@
 // version's once, until it's dismissed; Settings → Updates lists the last few versions'.
 export const NEWS = [
   {
-    version: '1.1.19',
+    version: '1.1.20',
     items: [
       { text: 'New: Keyframes (Workflows). Pictures in order become one video: one smooth take through up to six pictures, or a chain of moves that carries the motion from one to the next. Loop back to the first, then Make the edit.' },
       { text: 'Characters are now full character pages: their look in words, pictures from every side with a role each, voice, and their LoRAs. Each model uses what it can: H3 their LoRA (or their face picture when they have none), Seedance their pictures and look.' },
@@ -11,7 +11,8 @@ export const NEWS = [
       { text: 'First renders: choose how many megapixels the first takes are, everywhere (Settings → Your PC, and on each page that hunts).' },
       { text: 'Updating IV Studio can update ComfyUI and your node packs too: the update pop-up shows what’s new for each and lets you pick. A snapshot first, and Undo in Settings → Setup.' },
       { text: 'Back and forward buttons in the title bar (Alt+Left and Alt+Right too), and a sidebar that folds to page icons.' },
-      { text: 'The app says Claude and ChatGPT for your agents. The title bar drops the graphics card’s name, and Incognito has a new switch.' }
+      { text: 'The app says Claude and ChatGPT for your agents. The title bar drops the graphics card’s name, and Incognito has a new switch.' },
+      { text: 'Fixed: an update could stop with “Failed to uninstall old application files … : 2” when one of IV Studio’s files was in use (GitHub #45). It now closes what’s using them and carries on.' }
     ]
   },
   {
