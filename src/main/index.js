@@ -41,6 +41,7 @@ import { offeredFx, CLIP_FX, FreefieldApps } from '../service/freefield'
 import { DEFAULT_TRACKS } from '../service/timeline'
 import { SCENE_KINDS, SIZZLE_FORMATS, Sizzles } from '../service/sizzle'
 import { initUpdater, updateState, MANUAL as UPDATE_MANUAL } from './updater'
+import { AppUpdate } from '../service/appupdate'
 import { MediaTools } from '../service/media'
 import ffmpegStatic from 'ffmpeg-ffprobe-static'
 import { ModelInstaller, hfLoginFrom, setSavedHfToken } from '../service/models'
@@ -3111,7 +3112,32 @@ app.whenReady().then(() => {
       installer?.running && 'models are downloading',
       Object.values(civitai.downloadState()).some((d) => d.status === 'downloading') && 'a LoRA is downloading'
     ].filter(Boolean)
-  const updater = initUpdater((state) => send('update:changed', state))
+  // The update pop-up (Update.jsx, appupdate.js): once IV Studio's update is downloaded, ComfyUI and its node packs
+  // are checked too, so the person can update them together before IV Studio restarts.
+  let appUpdate = null
+  const updater = initUpdater((state) => {
+    send('update:changed', state)
+    if (state.status === 'ready' && appUpdate) appUpdate.check({ version: state.available })
+  })
+  appUpdate = new AppUpdate({
+    studio,
+    launcher: () => launcherFor(readSettings(BASE)),
+    folder: () => readSettings(BASE).comfyFolder || null,
+    comfyUp,
+    isLocal: (url) => readSettings(BASE).target !== 'cloud' && isLocalUrl(url),
+    busy,
+    install: () => updater.install(),
+    dataDir: DATA,
+    onChange: (s) => send('update:comfy', s)
+  })
+  if (updateState().status === 'ready') appUpdate.check({ version: updateState().available })
+  handle('update:comfyState', () => appUpdate.state)
+  handle('update:comfyCheck', (opts) => appUpdate.check({ version: updateState().available, ...(opts || {}) }))
+  handle('update:run', (opts) => {
+    if (updateState().status !== 'ready') throw new Error('The update isn’t downloaded yet.')
+    return appUpdate.run({ withComfy: !!opts?.withComfy, version: updateState().available, onProgress: (u) => send('update:progress', u) })
+  })
+  handle('update:notice', () => appUpdate.notice())
   handle('update:state', () => updateState())
   handle('update:check', () => updater.check())
   handle('update:install', () => {

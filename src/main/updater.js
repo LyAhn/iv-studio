@@ -6,6 +6,7 @@
 import { app, shell } from 'electron'
 import electronUpdater from 'electron-updater'
 import { dataLocation } from '../service/paths'
+import { notesOf } from '../service/appupdate'
 import { initMacUpdater } from './macupdater'
 import { initPortableUpdater } from './portableupdater'
 
@@ -32,8 +33,14 @@ export function initUpdater(onChange) {
     onChange(state)
   }
 
-  // Development builds have no app-update.yml; only packaged builds check.
+  // Development builds have no app-update.yml; only packaged builds check. IV_STUDIO_FAKE_UPDATE (a version, test
+  // copies only) shows that version as downloaded, so a test can drive the update pop-up; installing it does nothing.
   if (!app.isPackaged) {
+    const fake = process.env.IV_STUDIO_FAKE_UPDATE
+    if (fake) {
+      set({ status: 'ready', available: fake, percent: 100, notes: 'A test update. Nothing installs.' })
+      return { check: async () => state, install: () => (set({ fakeInstalled: (state.fakeInstalled || 0) + 1 }), true) }
+    }
     set({ status: 'dev' })
     return { check: async () => state, install: () => false }
   }
@@ -50,7 +57,7 @@ export function initUpdater(onChange) {
   autoUpdater.on('update-available', (info) => set({ status: MANUAL ? 'available' : 'downloading', available: info.version, percent: MANUAL ? null : 0, checkedAt: new Date().toISOString() }))
   autoUpdater.on('download-progress', (p) => set({ status: 'downloading', percent: p.percent }))
   autoUpdater.on('update-downloaded', (info) => {
-    set({ status: 'ready', available: info.version, percent: 100 })
+    set({ status: 'ready', available: info.version, percent: 100, notes: notesOf(info.releaseNotes) })
     // the Linux CI's update check (scripts/ci-linux.sh): a test copy on a local feed installs and reopens at once
     if (TEST_FEED && process.env.IV_STUDIO_UPDATE_SELFTEST === '1') setTimeout(() => autoUpdater.quitAndInstall(true, true), 500)
   })

@@ -22,7 +22,7 @@ contextBridge.exposeInMainWorld('ivstudio', {
   timing: { estimate: call('timing:estimate') },
   data: { info: call('data:info'), size: call('data:size'), choose: call('data:choose'), move: call('data:move'), restart: call('data:restart'), removeOld: call('data:removeOld'), open: call('data:open'), onProgress: on('data:progress') },
   learn: { openGuide: call('learn:openGuide') },
-  update: { state: call('update:state'), check: call('update:check'), install: call('update:install'), onChange: on('update:changed') },
+  update: { state: call('update:state'), check: call('update:check'), install: call('update:install'), onChange: on('update:changed'), comfyState: call('update:comfyState'), comfyCheck: call('update:comfyCheck'), run: call('update:run'), notice: call('update:notice'), onComfy: on('update:comfy'), onProgress: on('update:progress') },
   incognito: { set: call('incognito:set') },
   queue: { list: call('queue:list'), cancel: call('queue:cancel') },
   // Projects: a short film from script to rough cut (src/service/productions.js)
