@@ -141,6 +141,7 @@ await ok("release notes: GitHub's HTML or Markdown as a few plain lines", () => 
   assert.equal(notesOf('<h2>What’s new</h2><ul><li>Keyframes: pictures in order become one video.</li><li>Fixed &amp; faster.</li></ul>'), 'What’s new\nKeyframes: pictures in order become one video.\nFixed & faster.')
   assert.equal(notesOf('## 1.1.19\n- One\n* Two\n\n'), '1.1.19\nOne\nTwo')
   assert.equal(notesOf([{ note: '<p>A</p>' }, { note: 'B' }]), 'A\nB')
+  assert.equal(notesOf('- **Bold** and `code` and [a link](https://x.y)'), 'Bold and code and a link')
   assert.equal(notesOf(null), null)
   assert.equal(notesOf(Array.from({ length: 12 }, (_, i) => `- ${i}`).join('\n')).split('\n').length, 8)
 })

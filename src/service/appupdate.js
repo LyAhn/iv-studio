@@ -36,6 +36,8 @@ export function notesOf(notes) {
     .replace(/&gt;/g, '>')
     .replace(/&#39;|&rsquo;/g, '’')
     .replace(/&quot;/g, '"')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\*\*|__|`/g, '')
   const lines = text
     .split(NL)
     .map((l) => l.replace(/^\s*(?:[-*•]|#+)\s*/, '').trim())

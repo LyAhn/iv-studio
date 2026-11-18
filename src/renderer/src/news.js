@@ -2,6 +2,19 @@
 // version's once, until it's dismissed; Settings → Updates lists the last few versions'.
 export const NEWS = [
   {
+    version: '1.1.19',
+    items: [
+      { text: 'New: Keyframes (Workflows). Pictures in order become one video: one smooth take through up to six pictures, or a chain of moves that carries the motion from one to the next. Loop back to the first, then Make the edit.' },
+      { text: 'Characters are now full character pages: their look in words, pictures from every side with a role each, voice, and their LoRAs. Each model uses what it can: H3 their LoRA (or their face picture when they have none), Seedance their pictures and look.' },
+      { text: 'New character: start from photos, a LoRA you have, a RefMod or a description. A character with only pictures works in H3 shots too.' },
+      { text: 'Seedance 2.5 Flash: Flash · 480p and Flash · 720p, cheaper and quicker. It appears once your ComfyUI has it.' },
+      { text: 'First renders: choose how many megapixels the first takes are, everywhere (Settings → Your PC, and on each page that hunts).' },
+      { text: 'Updating IV Studio can update ComfyUI and your node packs too: the update pop-up shows what’s new for each and lets you pick. A snapshot first, and Undo in Settings → Setup.' },
+      { text: 'Back and forward buttons in the title bar (Alt+Left and Alt+Right too), and a sidebar that folds to page icons.' },
+      { text: 'The app says Claude and ChatGPT for your agents. The title bar drops the graphics card’s name, and Incognito has a new switch.' }
+    ]
+  },
+  {
     version: '1.1.18',
     items: [
       { text: 'New: Music video (Workflows). Pick a song; IV Studio finds its beat and parts and cuts it into scenes on the bars. Your cast sings and plays along to each scene’s own stretch of the song, and Make the edit lays the finished scenes over the song.' },
