@@ -21,6 +21,7 @@ import { CinemaChips, CinemaPicker, PromptTools, useSlate } from './CraftKit'
 import { withSetups, withoutSetups } from '../../../service/setuptext'
 import { starterById, starterForm } from '../starters'
 import TemplateBar from './Templates'
+import { showFor } from '../../../service/bible'
 
 // the preview pass's tested sampler and scheduler (plan.js DEFAULTS)
 const SAMPLER_DEFAULT = 'er_sde'
@@ -73,6 +74,8 @@ Audio: ___.
 Pure video, no subtitles, no on-screen text, no background music.`
 const TIERS = [
   ['draft', 'Draft · 480p', 'Quick and cheap to hunt with. Finish the one you pick at 1080p with Seedance, or free on this PC.'],
+  ['flash480', 'Flash · 480p', 'Seedance 2.5 Flash: cheaper and quicker than Draft. Its takes are finished already (they can’t go up to 1080p with Seedance).'],
+  ['flash720', 'Flash · 720p', 'Seedance 2.5 Flash at 720p: cheaper than 720p, final straight away.'],
   ['720p', '720p', 'Final quality straight away.'],
   ['1080p', '1080p', 'Final quality, full HD.']
 ]
@@ -162,6 +165,17 @@ export default function Create({ setup, characters, notify, openShot, go, incomi
     window.ivstudio.characters.catalog?.().then(setCatalog, () => {})
   }, [])
   const faceOf = (c) => c?.picture || catalog.find((x) => x.id === c?.id)?.picture || null
+  // ComfyUI's LoRA names, so the character note can say when a LoRA isn't there
+  const [loraNames, setLoraNames] = useState([])
+  useEffect(() => {
+    window.ivstudio.characters.loras?.().then((l) => setLoraNames(l || []), () => {})
+  }, [])
+  // the Seedance qualities this ComfyUI can make (Flash needs a ComfyUI newer than 0.45.0); all until it answers
+  const [tiersHere, setTiersHere] = useState(null)
+  useEffect(() => {
+    window.ivstudio.render.seedanceTiers?.().then((t) => setTiersHere(t?.length ? t : null), () => {})
+  }, [])
+  const tiersShown = TIERS.filter(([id]) => !tiersHere || tiersHere.includes(id) || form.tier === id)
   // @ mentions: the cast and places a prompt can name (cast.js), and the new-place dialog with what to do after it
   const [members, setMembers] = useState([])
   const [newPlace, setNewPlace] = useState(null)
@@ -674,7 +688,17 @@ export default function Create({ setup, characters, notify, openShot, go, incomi
             )}
             {h3 && characters.length > 1 && !form.with?.length && <p className="dim small engine-note" data-plain="Click more than one to put them in the shot together.">Click more than one character to put them in the shot together.</p>}
             {h3 && form.with?.length > 0 && <CastNote lead={char} others={form.with.map((id) => characters.find((c) => c.id === id)).filter(Boolean)} mode={form.mode} faceOf={faceOf} />}
-            {sd && <p className="dim small engine-note">Seedance takes a character as their face picture, named in the prompt. LoRAs and RefMods are for H3 only.</p>}
+            {sd && <p className="dim small engine-note">Seedance takes a character as their pictures (face, three-quarter and full body) and their look in words. LoRAs and RefMods are for H3 only.</p>}
+            {/* what the picked model gets of the character, from their bible (bible.js) */}
+            {!lx && char && (() => {
+              const s = showFor(sd ? 'seedance' : 'h3', char, { exists: (l) => !loraNames.length || loraNames.some((x) => x.replace(/\\/g, '/').toLowerCase() === String(l).replace(/\\/g, '/').toLowerCase()) })
+              return (
+                <p className={`small engine-note bible-uses ${s.way === 'words' ? 'pink' : ''}`}>
+                  <span className="mono">Uses: {s.label}</span>
+                  {s.note && <span className="dim"> · {s.note}</span>}
+                </p>
+              )
+            })()}
             {h3 && (
             <>
             <div className="create-field">
@@ -972,13 +996,16 @@ export default function Create({ setup, characters, notify, openShot, go, incomi
                 <div className="create-field">
                   <span className="create-label mono">Quality</span>
                   <div className="segmented">
-                    {TIERS.map(([id, label, hint]) => (
+                    {tiersShown.map(([id, label, hint]) => (
                       <button key={id} className={form.tier === id ? 'on' : ''} onClick={() => set({ tier: id })} title={hint}>
                         {label}
                       </button>
                     ))}
                   </div>
-                  <span className="dim small">{TIERS.find(([id]) => id === form.tier)?.[2]}</span>
+                  <span className="dim small">
+                    {TIERS.find(([id]) => id === form.tier)?.[2]}
+                    {tiersHere && !tiersHere.includes('flash480') && ' Seedance 2.5 Flash comes with a newer ComfyUI (Settings → Setup → Updates).'}
+                  </span>
                 </div>
                 {form.mode !== 'continue' && (
                   <div className="create-field">

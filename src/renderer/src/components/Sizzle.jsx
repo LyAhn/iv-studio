@@ -191,7 +191,7 @@ export function SizzleProject({ sizzleId, notify, go, openShinobi }) {
       </Step>
 
       <Step n={2} title="Storyboard" sub={s.plan ? `${s.scenes.length} scenes · ${s.plan.seconds} s` : 'Your agent writes it from the capture; you approve it before anything renders.'}>
-        {!s.plan && <p className="small dim">Your agent writes it from the capture. Paste the message below into Claude Code, Codex or another agent connected to IV Studio (Settings → Agents).</p>}
+        {!s.plan && <p className="small dim">Your agent writes it from the capture. Paste the message below into Claude, ChatGPT or another agent connected to IV Studio (Settings → Agents).</p>}
         {s.plan && (
           <>
             <div className="sz-scenes">
@@ -258,7 +258,7 @@ export function SizzleProject({ sizzleId, notify, go, openShinobi }) {
         )}
       </Step>
 
-      <Step n={3} title={s.final ? 'The film' : 'Your agent'} sub={s.final ? 'The latest cut. Your agent can keep refining it in Shinobi.' : 'Paste this into Claude Code, Codex or another agent connected to IV Studio (Settings → Agents).'}>
+      <Step n={3} title={s.final ? 'The film' : 'Your agent'} sub={s.final ? 'The latest cut. Your agent can keep refining it in Shinobi.' : 'Paste this into Claude, ChatGPT or another agent connected to IV Studio (Settings → Agents).'}>
         {s.final && <video key={s.final} className="sz-final" src={fileUrl(s.final)} controls playsInline />}
         {s.cut && (
           <p className="mono small dim">

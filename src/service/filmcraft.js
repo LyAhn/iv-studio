@@ -33,7 +33,7 @@ export async function writerSees(writer) {
   if (isHarness(w.engine)) return true
   return localWriterModel(w.engine === 'local' ? w.model || undefined : undefined).then((m) => !!m.vision, () => false)
 }
-export const writerName = (w) => ({ claude: 'Claude Code', codex: 'Codex', hermes: 'Hermes' })[w?.engine] || (w?.provider === 'openai' ? 'the OpenAI-compatible writer' : 'the local writer')
+export const writerName = (w) => ({ claude: 'Claude', codex: 'ChatGPT', hermes: 'Hermes' })[w?.engine] || (w?.provider === 'openai' ? 'the OpenAI-compatible writer' : 'the local writer')
 
 // ---------- Slate's data ----------
 const cache = new Map()

@@ -77,6 +77,7 @@ import { Comfy } from '../service/comfy'
 import { SCENE_KINDS, SIZZLE_FORMATS, Sizzles } from '../service/sizzle'
 import { Reader } from '../service/reader'
 import { KINDS as REBUILD_KINDS, Rebuilds, ROUTES as REBUILD_ROUTES, WHERE as REBUILD_WHERE } from '../service/rebuild'
+import { faceOf, MODELS as BIBLE_MODELS, ROLES, showFor } from '../service/bible'
 
 // Settings in BASE; what's made in DATA (BASE\incognito while the app is in Incognito; see contentDir).
 // The same data folder the app uses (paths.js): IV_STUDIO_DATA, the portable "data" folder beside IV Studio.exe,
@@ -288,7 +289,7 @@ const media = z
 const SPEED_HELP = SPEED_IDS.map((id) => `${id}: ${SPEEDS[id].say}`).join(' ')
 const request = {
   engine: z.enum(['h3', 'ltx', 'seedance']).default('h3').describe('h3: MiniMax H3 on this PC (free). ltx: LTX 2.5 on this PC (free, quicker, good for cartoons and animation; text or frames mode only, 2 to 20 s; no characters, LoRAs, RefMods or voice lines; write the prompt as one plain paragraph, write_prompt target ltx; a take is half size, finish_candidate makes it again with its seed and LTX\'s own 2x upscale). seedance: Seedance 2.5 through ComfyUI\'s partner nodes, on the person\'s Comfy.org credits (needs COMFY_ORG_API_KEY in this server\'s environment and confirm_cost; price it first with price_shot). Seedance takes no LoRAs, RefMods or sampler settings; a character comes in as their face picture.'),
-  tier: z.enum(['draft', '720p', '1080p']).optional().describe('seedance: draft (480p, cheap, for hunting; finish the pick at 1080p with way seedance, or use it as it is with way take), 720p or 1080p (final quality)'),
+  tier: z.enum(['draft', 'flash480', 'flash720', '720p', '1080p']).optional().describe('seedance: flash480 / flash720 (Seedance 2.5 Flash, cheaper and quicker, its takes are finals; needs a ComfyUI newer than 0.45.0), draft (480p, cheap, for hunting; finish the pick at 1080p with way seedance, or use it as it is with way take), 720p or 1080p (final quality)'),
   audio: z.boolean().optional().describe('seedance: generate sound (default true)'),
   mode: z.enum(Object.keys(MODES)).default('text').describe('text, frames (first/last frame), reference (ref2va), continue (extend a video)'),
   prompt: z.string().describe('H3 prompt. Write {char} where the character trigger word goes, e.g. "{char} (S1) says: <d>[English] Hi.</d>". For seedance: plain sentences, references named @image1, @video1, @audio1 in attach order (write_prompt with target seedance writes them)'),
@@ -362,7 +363,10 @@ tool('update_comfy', "Update this PC's ComfyUI through ComfyUI-Manager: saves a 
   return studio.updateComfy({ folder: s.comfyFolder || null, launcher: launcherFor(s) })
 })
 tool('undo_comfy_update', "Undo the last update_comfy (or the Setup screen's Update everything): restores the snapshot it saved and restarts ComfyUI. Afterwards it switches back on any pack ComfyUI-Manager's restore switched off (plain folders a snapshot can't track, IV Studio's own pack among them) and restarts again; reenabled lists them. If ComfyUI isn't running, the snapshot is set to restore at its next start (startNeeded: true): start ComfyUI, then call this again to finish.", {}, () => studio.undoComfyUpdate({ folder: readSettings(BASE).comfyFolder || null }))
-tool('list_characters', 'Character presets (LoRA, strength, trigger word).', {}, () => studio.characters())
+tool('list_characters', 'Characters (bibles): name, who they are, their H3 LoRA or RefMod, pictures, and per model (h3, seedance) what that model uses to show them (LoRA, RefMod, pictures or words). get_character has the whole bible.', {}, async () => {
+  const loras = await studio.loraNames().catch(() => null)
+  return studio.characters().map((c) => ({ ...c, models: whatModelsUse(c, loras?.length ? loras : null) }))
+})
 tool('list_projects', 'Projects in the IV Studio library, newest first.', {}, () => studio.listProjects())
 tool('plan_render', 'Validate a request and resolve size, frames, duration, seeds and the finished size, without rendering.', { ...request, finish: z.object(finish).partial().optional() }, ({ finish: f, ...r }) => {
   const req = applySaved(r, readSettings(BASE))
@@ -1456,35 +1460,65 @@ tool('set_workflow_model', 'Choose the H3 model one workflow uses (Settings -> M
   return { chosen: studio.models }
 })
 tool('list_choices', 'Character LoRAs and RefMods the ComfyUI can load (for save_character and the refmods of a request).', {}, () => studio.choices())
-tool('save_character', 'Add a character preset, or update one by id. A character is a LoRA (a name from list_choices, with its trigger word) or a RefMod (refmod: a name from list_choices refmods; {char} then becomes its name). Only invented characters, or real people who agreed to it.', {
+tool('save_character', 'Add a character, or update one by id. A character is a bible (bible.js): name, who they are (about), their look and manner in words, their voice, pictures (add_character_pictures) and what each model uses: an H3 LoRA (lora from list_choices, with its trigger word; more H3 LoRAs in h3Loras) or a RefMod. A new character needs a name and at least one of: a LoRA with its trigger, a RefMod, or a look in words (add pictures right after). Each model then picks what it can use (get_character shows it). Only invented characters, or real people who agreed to it.', {
   id: z.string().regex(/^[a-z0-9_-]{2,32}$/).describe('Short id, e.g. "tess"'),
   name: z.string().min(1).optional(),
+  about: z.string().optional().describe('One line: who they are, e.g. "a jazz singer in her thirties"'),
+  look: z.string().optional().describe('Their look in words, written for prompts: face, hair, skin, build, marks'),
+  manner: z.string().optional().describe('How they move and talk'),
+  voiceNote: z.string().optional().describe('Their voice in words, e.g. "soft Bristol West Country voice"'),
   refmod: z.string().optional().describe('A RefMod from list_choices refmods, e.g. "characters/maya_ab12cd", for a RefMod character (no LoRA or trigger needed)'),
-  lora: z.string().optional(),
+  lora: z.string().optional().describe('Their main H3 LoRA (list_choices loras)'),
   strength: z.number().min(0).max(1.5).optional(),
   trigger: z.string().min(2).optional().describe('The trigger word the LoRA was trained on; prompts write {char} for it'),
+  h3Loras: z.array(z.object({ name: z.string(), strength: z.number().min(0).max(1.5).default(0.8) })).optional().describe('More H3 LoRAs loaded with the main one (a style, an outfit), replacing the list'),
+  pictureRoles: z.record(z.enum(ROLES)).optional().describe('Picture id -> role (face, three-quarter, profile, full body, expression, outfit, other); ids from get_character'),
   voiceRefmod: z.string().nullable().optional(),
   visualRefmod: z.string().nullable().optional(),
   voiceId: z.string().nullable().optional().describe('A voice from list_voices: the voice speak_line uses for this character; null for none')
-}, async ({ id, ...fields }) => {
+}, async ({ id, h3Loras, pictureRoles, ...fields }) => {
   if (fields.voiceId) voices.get(fields.voiceId)
   if (fields.voiceId === null) fields.voiceDeclined = true
   const list = studio.characters()
   const old = list.find((c) => c.id === id)
-  const next = { ...(old || { strength: 0.8 }), id, ...Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined)) }
-  // a RefMod character needs its RefMod; any other a LoRA and its trigger word
-  for (const k of next.refmod && !next.lora ? ['name', 'refmod'] : ['name', 'lora', 'trigger']) if (!next[k]) throw new Error(`A new character needs ${k}.`)
-  if (fields.refmod) {
-    const { refmods } = await studio.choices()
-    if (!refmods.includes(fields.refmod)) throw new Error(`ComfyUI has no RefMod "${fields.refmod}". list_choices shows them.`)
+  const next = { ...(old || { strength: 0.8, trigger: '' }), id, ...Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined)) }
+  if (!next.name) throw new Error('A new character needs a name.')
+  if (!old && !(next.lora && next.trigger) && !next.refmod && !next.look && !next.about) throw new Error('A new character needs a LoRA with its trigger word, a RefMod, or their look in words (then add pictures with add_character_pictures).')
+  if (next.lora && !next.trigger) throw new Error('A LoRA needs its trigger word.')
+  const { loras, refmods } = fields.refmod || fields.lora || h3Loras ? await studio.choices() : { loras: [], refmods: [] }
+  const has = (l) => loras.some((x) => x.replace(/\\/g, '/') === l.replace(/\\/g, '/'))
+  if (fields.refmod && !refmods.includes(fields.refmod)) throw new Error(`ComfyUI has no RefMod "${fields.refmod}". list_choices shows them.`)
+  if (fields.lora && !has(fields.lora)) throw new Error(`ComfyUI has no LoRA "${fields.lora}". list_choices shows them.`)
+  for (const l of h3Loras || []) if (!has(l.name)) throw new Error(`ComfyUI has no LoRA "${l.name}". list_choices shows them.`)
+  if (h3Loras) next.models = { ...(next.models || {}), h3: { ...(next.models?.h3 || {}), loras: h3Loras } }
+  if (pictureRoles) {
+    for (const pid of Object.keys(pictureRoles)) if (!(next.pictures || []).some((p) => p.id === pid)) throw new Error(`${next.name} has no picture ${pid} (get_character lists them).`)
+    next.pictures = (next.pictures || []).map((p) => (pictureRoles[p.id] ? { ...p, role: pictureRoles[p.id] } : p))
+    next.picture = faceOf(next.pictures)
   }
-  if (fields.lora) {
-    const { loras } = await studio.choices()
-    if (!loras.some((l) => l.replace(/\\/g, '/') === fields.lora.replace(/\\/g, '/'))) throw new Error(`ComfyUI has no LoRA "${fields.lora}". list_choices shows them.`)
-  }
-  studio.saveCharacters(old ? list.map((c) => (c.id === id ? next : c)) : [...list, next])
-  return next
+  const saved = studio.saveCharacters(old ? list.map((c) => (c.id === id ? next : c)) : [...list, next]).find((c) => c.id === id)
+  return { ...saved, models: whatModelsUse(saved, loras.length ? loras : null) }
 })
+// What each model uses of a character (bible.js showFor), with whether their LoRA is in ComfyUI when that's known.
+const whatModelsUse = (c, loras) => {
+  const exists = loras ? (n) => loras.some((l) => l.replace(/\\/g, '/').toLowerCase() === String(n).replace(/\\/g, '/').toLowerCase()) : () => true
+  return Object.fromEntries(Object.entries(BIBLE_MODELS).map(([k, m]) => {
+    const s = showFor(m.engines[0], c, { exists })
+    return [k, { model: m.label, uses: s.way, label: s.label, pictures: (s.pictures || []).map((p) => ({ file: p.file, role: p.role })), words: s.words || null, note: s.note || null }]
+  }))
+}
+tool('get_character', "One character's whole bible: who they are, their look and manner in words, voice, pictures (with ids and roles) and, per model, what that model uses to show them (H3: its LoRA or RefMod, else their face picture as a reference, else words; Seedance 2.5 and Flash: up to 3 pictures, face, three-quarter and full body first, plus their look in words).", { id: z.string() }, async ({ id }) => {
+  const c = studio.characters().find((x) => x.id === id)
+  if (!c) throw new Error(`No character ${id}. list_characters shows them.`)
+  const loras = await studio.loraNames().catch(() => null)
+  return { ...c, models: whatModelsUse(c, loras?.length ? loras : null) }
+})
+tool('add_character_pictures', "Add pictures of a character to their bible (copied into IV Studio's data folder). role sets the role of all of them (face, three-quarter, profile, full body, expression, outfit, other); left out, the first picture of a character without a face picture is their face. Seedance uses them as references; H3 uses the face picture when the character has no H3 LoRA. Only invented characters, or real people who agreed to it.", {
+  id: z.string(),
+  files: z.array(z.string()).min(1).max(30).describe('Image file paths (PNG, JPEG, WebP)'),
+  role: z.enum(ROLES).optional()
+}, ({ id, files, role }) => studio.addCharacterPictures(id, files, role || null))
+tool('remove_character_picture', "Take a picture out of a character's bible (picture id from get_character). Ask the person first.", { id: z.string(), pictureId: z.string() }, ({ id, pictureId }) => studio.removeCharacterPicture(id, pictureId))
 // RefMod characters: made from pictures (and a voice clip) on this PC's ComfyUI, in seconds (refmods.js)
 const refmodMaker = new RefMods({ studio, dataDir: DATA })
 tool('make_refmod_character', "Make a character from pictures as a RefMod (no training): 1 to 6 clear pictures of one person (the first becomes their face) and, optionally, a voice clip of up to 15 seconds. Runs on this PC's ComfyUI (about 15 seconds a picture, free) with the ComfyUI-MiniMaxH3Mod pack, saves models/refmods/characters/<name>.safetensors and adds the character; Create shots then use it with {char} for its name. Only the person's own pictures, an invented person, or someone who agreed to it: pass consent true only when the person said so.", {

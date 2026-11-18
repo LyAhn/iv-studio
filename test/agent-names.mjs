@@ -10,7 +10,7 @@ const check = (cond, msg) => {
 }
 check(namesNote({}) === '', 'no names: nothing added')
 const both = namesNote({ agentName: 'Nova', userName: 'Sam', engine: 'claude' })
-check(/calls you Nova/.test(both) && /Claude Code/.test(both), 'the agent is told its name and the app it runs on')
+check(/calls you Nova/.test(both) && /\bClaude\b/.test(both), 'the agent is told its name and the app it runs on')
 check(/name is Sam/.test(both), 'the agent is told the person’s name')
 check(!/name is/.test(namesNote({ agentName: 'Nova', engine: 'codex' })), 'no person’s name when they gave none')
 check(/calls you/.test(namesNote({ agentName: 'Nova', engine: 'hermes' })) && /Hermes/.test(namesNote({ agentName: 'Nova', engine: 'hermes' })), 'Hermes too')

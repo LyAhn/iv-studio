@@ -145,8 +145,8 @@ function WordsCard({ n, settings, setSettings }) {
 // agent: agentchat.js namesNote), and which app the agent runs on (chatEngine: Claude Code, Codex, Hermes, or Local AI
 // on the person's own Ollama, localchat.js).
 const AGENT_APPS = [
-  ['claude', 'Claude Code'],
-  ['codex', 'Codex'],
+  ['claude', 'Claude'],
+  ['codex', 'ChatGPT'],
   ['hermes', 'Hermes'],
   ['local', 'Local AI']
 ]
@@ -185,8 +185,8 @@ function YouCard({ n, settings, setSettings, notify }) {
   return (
     <SetCard id="you" n={n} title="You and your agent" sub="Give your agent a name, and tell it yours. The chat, the Dashboard and the activity log use them, and your agent answers to its name." aside={settings.agentName ? <Pill>{settings.agentName}</Pill> : null}>
       <NameField label="Your name" hint="What your agent calls you. Leave it empty to stay anonymous." value={settings.userName} placeholder="Your name" onSave={(v) => set({ userName: v })} />
-      <NameField label="Your agent’s name" hint="Anything you like. Empty uses the app’s own name, like Claude Code." value={settings.agentName} placeholder="Name your agent" onSave={(v) => set({ agentName: v })} />
-      <SetField label="It runs on" hint="The agent app on this PC that does the work, on its own sign-in and plan. Ideas from the Dashboard run on Claude Code or Codex. Settings → Agents has the details.">
+      <NameField label="Your agent’s name" hint="Anything you like. Empty uses the app’s own name, like Claude." value={settings.agentName} placeholder="Name your agent" onSave={(v) => set({ agentName: v })} />
+      <SetField label="It runs on" hint="The agent app on this PC that does the work, on its own sign-in and plan. Ideas from the Dashboard run on Claude or ChatGPT. Settings → Agents has the details.">
         <div className="segmented" role="radiogroup" aria-label="Agent app">
           {AGENT_APPS.map(([id, label]) => (
             <button key={id} role="radio" aria-checked={app === id} className={app === id ? 'on' : ''} disabled={!installed[id]} title={installed[id] ? '' : id === 'local' ? 'Local AI needs Ollama (ollama.com) on this PC' : `${label} isn’t on this PC`} onClick={() => set({ chatEngine: id })}>
@@ -196,7 +196,7 @@ function YouCard({ n, settings, setSettings, notify }) {
         </div>
       </SetField>
       {app === 'local' && (
-        <SetField label="Local AI’s model" hint="A model in your Ollama that can use tools, like Qwen3 or Llama 3.1. Free and private, on this PC; slower and simpler than Claude Code or Codex, with IV Studio’s everyday tools. Empty uses the prompt writer’s model.">
+        <SetField label="Local AI’s model" hint="A model in your Ollama that can use tools, like Qwen3 or Llama 3.1. Free and private, on this PC; slower and simpler than Claude or ChatGPT, with IV Studio’s everyday tools. Empty uses the prompt writer’s model.">
           <select value={settings.localChatModel || ''} onChange={(e) => set({ localChatModel: e.target.value })}>
             <option value="">Same as the prompt writer{settings.ollamaModel ? ` (${settings.ollamaModel})` : ''}</option>
             {(ollamaModels || []).map((m) => (
@@ -495,8 +495,8 @@ function ModelCard({ n, settings, setSettings, notify }) {
 
 // The person's own Claude Code or Codex as the writer: whether it's on this PC, and which of its models writes.
 const HARNESS = {
-  claude: { name: 'Claude Code', maker: 'Anthropic', login: 'Claude', get: 'https://claude.com/claude-code', key: 'claudeModel' },
-  codex: { name: 'Codex', maker: 'OpenAI', login: 'ChatGPT', get: 'https://openai.com/codex', key: 'codexModel' },
+  claude: { name: 'Claude', maker: 'Anthropic', login: 'Claude', get: 'https://claude.com/claude-code', key: 'claudeModel' },
+  codex: { name: 'ChatGPT', maker: 'OpenAI', login: 'ChatGPT', get: 'https://openai.com/codex', key: 'codexModel' },
   // Hermes writes on the model set in Hermes itself; it has no model list here
   hermes: { name: 'Hermes', maker: 'the provider of the model you picked in Hermes', login: 'Hermes', get: 'https://github.com/NousResearch/hermes-agent', key: 'hermesModel' }
 }
@@ -556,8 +556,8 @@ function WriterCard({ n, settings, setSettings, notify }) {
   const missing = (id) => (id === 'local' ? status && !status.installed : id === 'contextir' ? !settings.hasComfyKey : id === 'openai' ? !settings.openaiUrl || !settings.openaiModel : status && !status.harnesses?.[id]?.installed)
   const ENGINES = [
     ['local', 'Local', 'Free · your own Ollama', 'Not installed'],
-    ['claude', 'Claude Code', 'Your Claude plan', 'Not installed'],
-    ['codex', 'Codex', 'Your ChatGPT plan', 'Not installed'],
+    ['claude', 'Claude', 'Your Claude plan', 'Not installed'],
+    ['codex', 'ChatGPT', 'Your ChatGPT plan', 'Not installed'],
     ['hermes', 'Hermes', 'Your own Hermes and its model', 'Not installed'],
     ['openai', 'OpenAI-compatible', 'Your own server or API', 'Needs setting up'],
     ['contextir', 'Context IR', 'MiniMax · paid per prompt', 'Needs a key']
@@ -986,7 +986,7 @@ function AgentCard({ n, mcp, settings, setSettings, notify }) {
   const manual = {
     claude: `claude mcp add -s user iv-studio -e ELECTRON_RUN_AS_NODE=1 -- ${cmd}`,
     codex: `codex mcp add iv-studio --env ELECTRON_RUN_AS_NODE=1 -- ${cmd}
-# Then in ~/.codex/config.toml, under [mcp_servers.iv-studio], add the line below, or Codex refuses
+# Then in ~/.codex/config.toml, under [mcp_servers.iv-studio], add the line below, or ChatGPT refuses
 # IV Studio's tools whenever its approvals are off:
 # default_tools_approval_mode = "approve"`,
     json: JSON.stringify({ mcpServers: { 'iv-studio': mcp } }, null, 2)
@@ -1001,8 +1001,8 @@ function AgentCard({ n, mcp, settings, setSettings, notify }) {
   }
   const skill = !agents.skillInstalled ? null : agents.skillCurrent ? 'ok' : 'warn'
   return (
-    <SetCard id="agents" n={n} title="Agents" sub="Claude Code, Codex and other agents can render, sequence and edit in IV Studio, with the same projects and results you see here." aside={<Pill>MCP</Pill>}>
-      <SetField label="On this PC" hint="Your own Claude Code or Codex, on your own plan. Install puts it in with the maker's own installer; Sign in opens its browser login.">
+    <SetCard id="agents" n={n} title="Agents" sub="Claude, ChatGPT and other agents can render, sequence and edit in IV Studio, with the same projects and results you see here." aside={<Pill>MCP</Pill>}>
+      <SetField label="On this PC" hint="Your own Claude or ChatGPT, on your own plan. Install puts it in with the maker's own installer; Sign in opens its browser login.">
         <AgentRows setup={setup} notify={notify} />
       </SetField>
       <SpendingField settings={settings} setSettings={setSettings} notify={notify} />
@@ -1012,8 +1012,8 @@ function AgentCard({ n, mcp, settings, setSettings, notify }) {
       <SetField label="Add it yourself">
         <div className="segmented set-seg">
           {[
-            ['claude', 'Claude Code'],
-            ['codex', 'Codex'],
+            ['claude', 'Claude'],
+            ['codex', 'ChatGPT'],
             ['json', 'Other (JSON)']
           ].map(([id, label]) => (
             <button key={id} className={client === id ? 'on' : ''} onClick={() => setClient(id)}>
@@ -1023,12 +1023,12 @@ function AgentCard({ n, mcp, settings, setSettings, notify }) {
         </div>
         <SetCode text={manual[client]} label="Copy" />
       </SetField>
-      <SetField label="Claude Code skill" hint="Teaches Claude Code IV Studio's workflow (shots, H3 prompts, sequences, edits and the house rules) so it picks the right tools without being told.">
+      <SetField label="Claude skill" hint="Teaches Claude IV Studio's workflow (shots, H3 prompts, sequences, edits and the house rules) so it picks the right tools without being told.">
         <div className="set-inline">
           {skill && <Pill tone={skill}>{skill === 'ok' ? 'Added' : 'Out of date'}</Pill>}
           {skill !== 'ok' && (
             <button className="btn btn-small" onClick={installSkill}>
-              {skill ? 'Update the skill' : 'Add the skill to Claude Code'}
+              {skill ? 'Update the skill' : 'Add the skill to Claude'}
             </button>
           )}
           <button className="link-btn mono small" onClick={() => open('https://github.com/hollisorg/iv-studio/blob/main/skills/iv-studio/SKILL.md')}>

@@ -294,7 +294,7 @@ export function RebuildProject({ rebuildId, notify, go, openEdit }) {
           </Step>
         )}
 
-        <Step n={r.framesApprovedAt ? 5 : r.planApprovedAt ? 4 : 3} title="Your agent" sub="Paste this into Claude Code or Codex, connected to IV Studio (Settings → Agents).">
+        <Step n={r.framesApprovedAt ? 5 : r.planApprovedAt ? 4 : 3} title="Your agent" sub="Paste this into Claude or ChatGPT, connected to IV Studio (Settings → Agents).">
           <SetCode text={agentMessage(r)} label="Copy message" tall />
         </Step>
       </div>

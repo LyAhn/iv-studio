@@ -19,7 +19,7 @@ export function useAgentSetup() {
 const ENGINES = ['claude', 'codex']
 
 export function AgentRows({ setup, notify, only }) {
-  if (!setup) return <p className="dim small">Looking for Claude Code and Codex…</p>
+  if (!setup) return <p className="dim small">Looking for Claude and ChatGPT…</p>
   const busy = setup.install?.status === 'running' ? setup.install.engine : null
   const act = (fn) => async () => {
     try {

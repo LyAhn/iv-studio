@@ -41,16 +41,16 @@ function CodexSetup({ f, onReady }) {
   return (
     <div className="family-setup">
       <div className="family-setup-head">
-        <h3>{f.label} needs Codex</h3>
+        <h3>{f.label} needs ChatGPT</h3>
         <p className="small dim">
           {f.note} <span className="mono">{f.licence}</span>
         </p>
       </div>
       <ol className="family-setup-steps small">
         <li>
-          Install Codex: the{' '}
+          Install ChatGPT: the{' '}
           <a href="https://chatgpt.com/codex" target="_blank" rel="noreferrer">
-            ChatGPT Codex app
+            ChatGPT’s coding app (Codex)
           </a>
           , or its command-line tool (<code>npm i -g @openai/codex</code>).
         </li>
@@ -330,7 +330,7 @@ export default function Images({ kindSwitch, notify, go, pictureToShot, incoming
           {modeStep}
 
           <section className="create-step">
-            <StepHead n={n.model} title="The model" sub={editMode ? 'Only models that can edit are on.' : 'Your image models in ComfyUI, and ChatGPT through your Codex. Each has its own look.'} />
+            <StepHead n={n.model} title="The model" sub={editMode ? 'Only models that can edit are on.' : 'Your image models in ComfyUI, and ChatGPT on your own ChatGPT plan. Each has its own look.'} />
             <div className="family-cards" role="radiogroup" aria-label="Model family">
               {families.map((f) => {
                 // a family that isn't set up stays clickable and opens what it needs; edit mode still rules out the ones

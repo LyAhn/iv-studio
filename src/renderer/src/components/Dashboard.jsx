@@ -49,7 +49,7 @@ function Recipes({ notify }) {
       <div className="recipe-row">
         {list.map((r) => (
           <span key={r.id} className="recipe">
-            <button className="recipe-go" disabled={!agent} title={agent ? r.instruction : 'Install Claude Code or Codex to use recipes'} onClick={() => askAgent({ text: r.instruction, about: `the recipe “${r.name}”`, send: true })}>
+            <button className="recipe-go" disabled={!agent} title={agent ? r.instruction : 'Install Claude or ChatGPT to use recipes'} onClick={() => askAgent({ text: r.instruction, about: `the recipe “${r.name}”`, send: true })}>
               <span className="recipe-name">{r.name}</span>
               {r.note && <span className="small dim">{r.note}</span>}
             </button>

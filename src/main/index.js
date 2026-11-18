@@ -2315,7 +2315,7 @@ app.whenReady().then(() => {
   const pushSetup = () => agentSetup().then((s) => send('agents:setupChanged', s), () => {})
   handle('agents:setup', () => agentSetup())
   handle('agents:install', (engine) => {
-    if (!AGENT_INFO[engine]) throw new Error('IV Studio can install Claude Code or Codex.')
+    if (!AGENT_INFO[engine]) throw new Error('IV Studio can install Claude or ChatGPT.')
     if (agentInstall?.status === 'running') throw new Error(`${AGENT_INFO[agentInstall.engine].name} is still installing.`)
     const stand = TEST_COPY && process.env.IV_STUDIO_TEST_INSTALL
     const state = { engine, status: 'running', lines: [], error: null, run: null }
@@ -2343,7 +2343,7 @@ app.whenReady().then(() => {
     return true
   })
   handle('agents:signIn', (engine) => {
-    if (!AGENT_INFO[engine]) throw new Error('IV Studio can sign in to Claude Code or Codex.')
+    if (!AGENT_INFO[engine]) throw new Error('IV Studio can sign in to Claude or ChatGPT.')
     const exe = agentsFound()[engine]
     if (!exe) throw new Error(`${AGENT_INFO[engine].name} isn't installed yet.`)
     if (testHome()) fs.writeFileSync(testSigned(engine), 'test')
@@ -2394,7 +2394,7 @@ app.whenReady().then(() => {
     if (chatTurn) throw new Error(`${chat.name} is answering in the chat. Wait for it, or stop it there.`)
     if (readSettings(BASE).target === 'cloud') throw new Error('IV Studio is set to render on the cloud. Your agent only renders on this PC (free): switch Cloud to This PC, or press Make it.')
     const { pick, exe } = agentPick()
-    if (!pick) throw new Error('Neither Claude Code nor Codex is installed on this PC.')
+    if (!pick) throw new Error('Neither Claude nor ChatGPT is installed on this PC.')
     const mcp = mcpCommand()
     const extraEnv = {}
     for (const k of ['IV_STUDIO_DATA', 'IV_STUDIO_USER_DATA']) if (process.env[k]) extraEnv[k] = process.env[k]
@@ -2496,7 +2496,7 @@ app.whenReady().then(() => {
   const chatEngine = (engine) => {
     const found = chatFound()
     const e = engine || chatPreferred(found)
-    if (!e || !AGENT_NAMES[e]) throw new Error('Install Claude Code, Codex, Hermes or Ollama (for Local AI) first: the chat uses your own.')
+    if (!e || !AGENT_NAMES[e]) throw new Error('Install Claude, ChatGPT, Hermes or Ollama (for Local AI) first: the chat uses your own.')
     if (!found[e]) throw new Error(`${AGENT_NAMES[e]} isn't installed on this PC.`)
     return e
   }
@@ -2837,6 +2837,10 @@ app.whenReady().then(() => {
     return refmodMaker.make({ ...opts, onStatus: (s) => send('refmods:status', s) })
   })
   handle('characters:save', (list) => studio.saveCharacters(list))
+  // the character bible (bible.js): one character's changes, its pictures (copied into the data folder)
+  handle('characters:saveOne', (patch) => studio.saveCharacter(patch))
+  handle('characters:addPictures', ({ id, files, role }) => studio.addCharacterPictures(id, files, role || null))
+  handle('characters:removePicture', ({ id, pictureId }) => studio.removeCharacterPicture(id, pictureId))
   handle('projects:list', () =>
     studio.listProjects().filter((p) => !p.sequenceId && !p.trainingId && !p.tool).map((p) => {
       const jobs = studio.listJobs(p.id)
@@ -2982,6 +2986,7 @@ app.whenReady().then(() => {
   handle('cast:deletePlace', (id) => studio.cast.deletePlace(id))
   // What a render would cost on Comfy.org credits (Seedance), and what finishing a take would
   handle('render:price', (request) => studio.priceRender(request))
+  handle('render:seedanceTiers', () => studio.seedanceTiers())
   handle('render:priceFinish', (opts) => studio.priceFinish(opts))
   handle('render:previews', async (request) => {
     if (request?.engine !== 'seedance') await freeVoices()

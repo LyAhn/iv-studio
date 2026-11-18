@@ -3297,42 +3297,57 @@ body.resizing * {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 8px;
-  background: none;
-  border: 0;
+  height: 28px;
+  padding: 0 4px 0 10px;
+  background: rgba(16, 12, 14, 0.6);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
   color: var(--paper-dim);
-  font-size: 11px;
-  letter-spacing: 0.14em;
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s, box-shadow 0.15s;
   -webkit-app-region: no-drag;
 }
-.incognito-switch:hover,
+.incognito-switch:hover {
+  color: var(--cream);
+  border-color: rgba(var(--pink-rgb), 0.6);
+}
+.incognito-switch:focus-visible {
+  outline: 1px solid var(--pink);
+  outline-offset: 2px;
+}
+.incognito-eye {
+  flex: none;
+  color: var(--paper-dim);
+  transition: color 0.15s;
+}
+.incognito-switch:hover .incognito-eye {
+  color: var(--pink);
+}
+.incognito-state {
+  min-width: 34px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--paper-dim);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-align: center;
+}
 .incognito-switch.on {
-  color: var(--paper);
+  color: var(--cream);
+  border-color: var(--pink);
+  background: rgba(var(--pink-rgb), 0.12);
+  box-shadow: 0 0 14px rgba(var(--pink-rgb), 0.25);
 }
-.incognito-switch .switch-track {
-  position: relative;
-  width: 26px;
-  height: 14px;
-  border: 1px solid var(--line-strong);
+.incognito-switch.on .incognito-eye {
+  color: var(--pink);
 }
-.incognito-switch .switch-knob {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 8px;
-  height: 8px;
-  background: var(--paper-dim);
-  transition: transform 0.15s;
-}
-.incognito-switch.on .switch-track {
+.incognito-switch.on .incognito-state {
   background: var(--red);
-  border-color: var(--red);
-}
-.incognito-switch.on .switch-knob {
-  transform: translateX(12px);
-  background: var(--ink);
+  color: var(--paper);
 }
 .incognito-switch + .engine-badge {
   margin-left: 22px;
@@ -14294,7 +14309,7 @@ html.rm .agent-dot.live {
 /* With room (a window 1350 px and wider) the chat takes its own column and the page narrows beside it, so nothing is
    covered; on smaller windows, where the page would get too cramped, it slides over the page instead. */
 .app.chat-on {
-  grid-template-columns: 210px minmax(0, 1fr) 380px;
+  grid-template-columns: var(--nav-w) minmax(0, 1fr) 380px;
 }
 .chat-panel {
   grid-column: 3;
@@ -14308,7 +14323,7 @@ html.rm .agent-dot.live {
 }
 @media (max-width: 1349px) {
   .app.chat-on {
-    grid-template-columns: 210px minmax(0, 1fr);
+    grid-template-columns: var(--nav-w) minmax(0, 1fr);
   }
   .chat-panel {
     position: fixed;
@@ -17968,4 +17983,475 @@ html.chat-window body {
 }
 .first-renders .segmented.wrap {
   width: max-content;
+}
+
+/* ---------- The character bible (CharacterProfile.jsx) ---------- */
+.bible {
+  display: grid;
+  gap: 18px;
+  padding-bottom: 40px;
+}
+.bible-head {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr) auto;
+  gap: 22px;
+  align-items: center;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--pink);
+  background: var(--ink-2);
+}
+.bible-face {
+  width: 132px;
+  height: 132px;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  background: var(--ink-3);
+  display: grid;
+  place-items: center;
+}
+.bible-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.bible-head-body {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.bible-name {
+  font-family: var(--display);
+  font-size: 34px;
+  text-transform: uppercase;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  color: var(--cream);
+  padding: 0;
+  min-width: 0;
+}
+.bible-name:focus,
+.bible-about:focus {
+  border-bottom-color: var(--pink);
+  outline: none;
+}
+.bible-about {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--paper);
+  padding: 4px 0;
+  min-width: 0;
+}
+.bible-ready {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.bible-chip {
+  padding: 4px 8px;
+  border: 1px solid var(--line-strong);
+  font-size: 11px;
+  color: var(--paper-dim);
+  white-space: nowrap;
+}
+.bible-chip.ok {
+  border-color: #6ee7a8;
+  color: #6ee7a8;
+}
+.bible-chip.warn {
+  border-color: var(--pink);
+  color: var(--pink);
+}
+.bible-tabs {
+  justify-self: start;
+}
+.bible-count {
+  margin-left: 6px;
+  opacity: 0.7;
+}
+.bible-panel {
+  display: grid;
+  gap: 16px;
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  background: var(--ink-2);
+}
+.bible-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.bible-field textarea,
+.bible-field input,
+.bible-field select {
+  width: 100%;
+}
+.bible-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 16px;
+}
+.bible-preview {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-left: 2px solid var(--pink);
+  background: rgba(var(--pink-rgb), 0.05);
+}
+.bible-preview p {
+  margin: 0;
+}
+.bible-lede {
+  margin: 0;
+}
+.bible-pics {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 12px;
+  padding: 4px;
+  border: 1px dashed transparent;
+}
+.bible-pics.over {
+  border-color: var(--pink);
+  background: rgba(var(--pink-rgb), 0.05);
+}
+.bible-pic {
+  position: relative;
+  margin: 0;
+  display: grid;
+  grid-template-rows: 200px auto;
+  border: 1px solid var(--line);
+  background: var(--ink-3);
+  min-width: 0;
+}
+.bible-pic.is-face {
+  border-color: var(--pink);
+}
+.bible-pic img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+.bible-pic figcaption {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+}
+.bible-pic figcaption select {
+  width: 100%;
+}
+.bible-pic-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--pink);
+  min-height: 12px;
+}
+.bible-pic-x {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line-strong);
+  background: rgba(16, 12, 14, 0.85);
+  color: var(--paper);
+  cursor: pointer;
+}
+.bible-pic-x:hover {
+  border-color: var(--pink);
+  color: var(--pink);
+}
+.bible-pic-add {
+  grid-template-rows: none;
+  place-content: center;
+  justify-items: center;
+  gap: 6px;
+  min-height: 260px;
+  color: var(--paper);
+  cursor: pointer;
+  border-style: dashed;
+}
+.bible-pic-add:hover {
+  border-color: var(--pink);
+}
+.bible-models {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+.bible-model {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line-strong);
+  background: var(--ink-3);
+  min-width: 0;
+}
+.bible-model header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.bible-model h3 {
+  margin: 0;
+  font-family: var(--display);
+  text-transform: uppercase;
+  font-size: 20px;
+}
+.bible-model p {
+  margin: 0;
+}
+.bible-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bible-extra {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.bible-extra .lora-chip {
+  width: 100%;
+}
+.bible-seed {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.bible-seed figure {
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+.bible-seed img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border: 1px solid var(--line);
+}
+.bible-words {
+  padding: 8px 10px;
+  border-left: 2px solid var(--pink);
+}
+.bible-later {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.bible-shots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.bible-shot {
+  display: grid;
+  gap: 4px;
+  padding: 0 0 8px;
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--ink-3);
+  color: var(--paper);
+  cursor: pointer;
+}
+.bible-shot:hover {
+  border-color: var(--pink);
+}
+.bible-shot > span:not(.bible-shot-cover) {
+  padding: 0 10px;
+}
+.bible-shot-cover {
+  display: block;
+  aspect-ratio: 16 / 9;
+  background: var(--ink);
+  overflow: hidden;
+}
+.bible-shot-cover img,
+.bible-shot-cover video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.bible-foot {
+  display: flex;
+  justify-content: flex-start;
+}
+.modal.bible-new {
+  display: grid;
+  gap: 14px;
+  width: min(640px, 100%);
+  border-top: 3px solid var(--pink);
+}
+.bible-new h2 {
+  margin: 0;
+}
+.bible-ways {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.bible-way {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding: 14px;
+  text-align: left;
+  border: 1px solid var(--line-strong);
+  background: var(--ink-3);
+  color: var(--paper);
+  cursor: pointer;
+  min-height: 44px;
+}
+.bible-way:hover:not(:disabled) {
+  border-color: var(--pink);
+}
+.bible-way:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.bible-way-title {
+  font-family: var(--display);
+  text-transform: uppercase;
+  font-size: 18px;
+  color: var(--cream);
+}
+@media (max-width: 1100px) {
+  .bible-head {
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+  .bible-face {
+    width: 96px;
+    height: 96px;
+  }
+  .bible-head-actions {
+    grid-column: 1 / -1;
+  }
+  .bible-row,
+  .bible-models,
+  .bible-ways {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- Back / forward and the folding sidebar (App.jsx, NavIcons.jsx) ---------- */
+.app {
+  --nav-w: 210px;
+  grid-template-columns: var(--nav-w) minmax(0, 1fr);
+}
+.app.nav-collapsed {
+  --nav-w: 64px;
+}
+.nav-arrows {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0 4px 0 -4px;
+  -webkit-app-region: no-drag;
+}
+.nav-arrow {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--paper-dim);
+  cursor: pointer;
+}
+.nav-arrow:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--cream);
+}
+.nav-arrow:focus-visible {
+  outline: 1px solid var(--pink);
+}
+.nav-arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.nav-arrow[aria-pressed='true'] {
+  color: var(--pink);
+}
+.nav-arrow-icon {
+  width: 18px;
+  height: 18px;
+}
+.nav .nav-icon {
+  display: none;
+  flex: none;
+}
+.app.nav-collapsed .nav {
+  padding-left: 8px;
+  padding-right: 8px;
+  overflow-x: hidden;
+}
+.app.nav-collapsed .nav .nav-icon {
+  display: block;
+}
+.app.nav-collapsed .nav-item {
+  justify-content: center;
+  align-items: center;
+  padding: 11px 0;
+  min-height: 44px;
+}
+.app.nav-collapsed .nav-num,
+.app.nav-collapsed .nav-label,
+.app.nav-collapsed .nav-site,
+.app.nav-collapsed .nav-update,
+.app.nav-collapsed .render-queue {
+  display: none;
+}
+.app.nav-collapsed .nav-library {
+  display: grid;
+  place-items: center;
+  padding: 10px 0;
+  min-height: 44px;
+}
+.app.nav-collapsed .section-switch {
+  grid-template-columns: 1fr;
+}
+.app.nav-collapsed .section-switch button {
+  display: grid;
+  place-items: center;
+  padding: 9px 0;
+  min-height: 40px;
+}
+.app.nav-collapsed .nav-dot {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+}
+.app.nav-collapsed .nav::before {
+  left: -120px;
+}
+.nav-item,
+.nav-library {
+  position: relative;
+}
+.app.nav-collapsed .nav-foot {
+  padding: 0;
+}
+.app.nav-collapsed .nav-foot > * {
+  min-width: 0;
+  max-width: 100%;
+}
+/* folded: no version number; a waiting update stays as one arrow */
+.app.nav-collapsed .nav-version {
+  display: none;
+}
+.app.nav-collapsed .nav-update.ready {
+  display: grid;
+  place-items: center;
+  min-height: 40px;
+  font-size: 0;
+}
+.app.nav-collapsed .nav-update.ready::before {
+  content: '↻';
+  font-size: 18px;
 }

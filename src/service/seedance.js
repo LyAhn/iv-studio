@@ -11,13 +11,29 @@
 // from its draft_task_id. 720p or 1080p takes are finals already. Prompts name references as @image1, @video1,
 // @audio1 (ComfyUI's own Seedance templates write them that way), in the order the graph attaches them.
 import { fillDefaults, missingInputs } from './nodeschema.js'
+import { seedanceRole, wordsFor } from './bible.js'
 
 export const SEEDANCE = 'seedance'
 export const SEEDANCE_LABEL = 'Seedance 2.5'
 export const SEEDANCE_TIERS = {
   draft: { model: 'Seedance 2.5 Draft', resolution: '480p', label: 'Draft · 480p', short: 480 },
   '720p': { model: 'Seedance 2.5', resolution: '720p', label: '720p', short: 720 },
-  '1080p': { model: 'Seedance 2.5', resolution: '1080p', label: '1080p', short: 1080 }
+  '1080p': { model: 'Seedance 2.5', resolution: '1080p', label: '1080p', short: 1080 },
+  // Seedance 2.5 Flash: cheaper and quicker, 480p or 720p; its takes are finals (Draft to Final takes only Draft takes).
+  // In ComfyUI's ByteDance nodes since 2026-11-15 (after 0.45.0); IV Studio offers it when the ComfyUI has it.
+  flash480: { model: 'Seedance 2.5 Flash', resolution: '480p', label: 'Flash · 480p', short: 480, flash: true },
+  flash720: { model: 'Seedance 2.5 Flash', resolution: '720p', label: 'Flash · 720p', short: 720, flash: true }
+}
+// The Seedance models a ComfyUI's text node offers (its "model" choices), from /object_info.
+export function modelsIn(info) {
+  const spec = info?.[NODES.text]?.input?.required?.model
+  const opts = Array.isArray(spec) ? spec[1]?.options : null
+  return Array.isArray(opts) ? opts.map((o) => o?.key).filter(Boolean) : Array.isArray(spec?.[0]) ? spec[0] : []
+}
+// The qualities a ComfyUI can make: every tier whose model it offers (all of them when it can't be read).
+export function tiersIn(info) {
+  const have = modelsIn(info)
+  return Object.keys(SEEDANCE_TIERS).filter((k) => !have.length || have.includes(SEEDANCE_TIERS[k].model))
 }
 export const SEEDANCE_RATIOS = ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9']
 export const SEEDANCE_SECONDS = { min: 4, max: 30 }
@@ -49,9 +65,10 @@ export function nodeFor(mode, { extraRefs = false } = {}) {
 }
 
 // request (Create's form, with engine: 'seedance'): mode, prompt, character, aspect, seconds, previews, seed, media,
-// voiceLine, tier ('draft' | '720p' | '1080p'), audio (true). face: the picked character's face picture (a path), if
-// it has one. Returns { request, refs, node, resolved } or throws with every problem.
-export function planSeedance(request, characters = [], { face = null } = {}) {
+// voiceLine, tier (a SEEDANCE_TIERS key), audio (true). face: the picked character's face picture (a path), if it has
+// one; pictures: the character's pictures from their bible ([{ file, role }], bible.js seedancePictures), used in place
+// of face. Returns { request, refs, node, resolved } or throws with every problem.
+export function planSeedance(request, characters = [], { face = null, pictures: own = null } = {}) {
   const r = { mode: 'text', prompt: '', character: 'none', aspect: '16:9', seconds: 5, previews: 2, seed: 4242, media: [], voiceLine: null, tier: 'draft', audio: true, ...request }
   const errors = []
   const tier = SEEDANCE_TIERS[r.tier]
@@ -68,13 +85,18 @@ export function planSeedance(request, characters = [], { face = null } = {}) {
   const videos = r.media.filter((m) => m.kind === 'video').map((m) => m.file || m.path)
   const audios = r.media.filter((m) => m.kind === 'audio').map((m) => m.file || m.path)
   const notes = []
-  // a character comes in as their face picture (H3 LoRAs and RefMods don't apply), after the person's own pictures
-  let faceTag = null
-  if (character && face && r.mode !== 'frames') {
-    pictures.push(face)
-    faceTag = tagOf('picture', pictures.length)
-  } else if (character && r.mode !== 'frames') notes.push(`${character.name} has no face picture, so Seedance only reads the name.`)
+  // a character comes in as their pictures from the bible (face, three-quarter, full body...; H3 LoRAs and RefMods
+  // don't apply), after the person's own pictures
+  const theirs = own?.length ? own : face ? [{ file: face, role: 'face' }] : []
+  const charTags = []
+  if (character && theirs.length && r.mode !== 'frames') {
+    for (const p of theirs) {
+      if (!pictures.includes(p.file)) pictures.push(p.file)
+      charTags.push({ tag: tagOf('picture', pictures.indexOf(p.file) + 1), role: p.role })
+    }
+  } else if (character && r.mode !== 'frames') notes.push(`${character.name} has no pictures, so Seedance only reads ${wordsFor(character) ? 'their description' : 'the name'}.`)
   else if (character) notes.push('First / last frame takes no other pictures, so the character is only named.')
+  const faceTag = charTags[0]?.tag || null
   if (r.voiceLine && r.mode !== 'frames') audios.push(r.voiceLine)
   else if (r.voiceLine) notes.push('First / last frame takes no sound, so the voice line is left out.')
 
@@ -93,14 +115,17 @@ export function planSeedance(request, characters = [], { face = null } = {}) {
   // written in when the prompt doesn't name them itself.
   const who = character?.name?.split(/\s+/)[0] || 'The person'
   const roles = []
-  if (faceTag && !r.prompt.includes(faceTag)) roles.push(`${faceTag} defines ${who}'s face, hair and build. Do not use the image background.`)
+  for (const t of charTags) if (!r.prompt.includes(t.tag)) roles.push(seedanceRole(t.tag, t.role, who))
+  // their look in words (the bible), when the prompt doesn't already carry it
+  const words = character ? wordsFor(character) : ''
+  if (words && !r.prompt.includes(words)) roles.push(words)
   const voiceTag = r.voiceLine && r.mode !== 'frames' ? tagOf('audio', audios.length) : null
   if (voiceTag && !r.prompt.includes(voiceTag)) roles.push(`${voiceTag} is ${who}'s voice: ${who} says exactly these words, in this voice.`)
   const prompt = (roles.length ? `${roles.join('\n')}\n\n` : '') + withName(r.prompt, character)
   return {
     engine: SEEDANCE,
     request: { ...r, seconds, prompt, character: r.character },
-    refs: { pictures, videos, audios, faceTag },
+    refs: { pictures, videos, audios, faceTag, characterTags: charTags.map((t) => t.tag) },
     node,
     notes,
     resolved: {

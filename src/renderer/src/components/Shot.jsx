@@ -109,7 +109,7 @@ export function Progress({ job }) {
 // A take reviewed against its prompt (review.js): the verdict, what works, each problem at its seconds (a click
 // plays the take from there), the fix, and the revised prompt to run again.
 const VERDICT = { usable: 'Usable as it is', usable_with_fixes: 'Usable, with fixes', redo: 'Redo it' }
-const ENGINE = { claude: 'Claude Code', codex: 'Codex', hermes: 'Hermes', local: 'the local writer' }
+const ENGINE = { claude: 'Claude', codex: 'ChatGPT', hermes: 'Hermes', local: 'the local writer' }
 function ReviewCard({ review, title, videoKey, before, onRun }) {
   const seek = (t) => {
     const v = document.querySelector(`video[data-take="${videoKey}"]`)
@@ -122,7 +122,7 @@ function ReviewCard({ review, title, videoKey, before, onRun }) {
         <span className="mono pink small">{VERDICT[review.verdict]}</span>
         <span className="dim small">by {ENGINE[review.engine] || review.engine}</span>
       </div>
-      {review.engine === 'local' && <p className="dim small">The local writer only reviews roughly. Claude Code or Codex (Settings → Prompt writer) see far more.</p>}
+      {review.engine === 'local' && <p className="dim small">The local writer only reviews roughly. Claude or ChatGPT (Settings → Prompt writer) see far more.</p>}
       {review.works?.length > 0 && <p className="small"><span className="dim">Works: </span>{review.works.join(' · ')}</p>}
       {review.issues?.length > 0 && (
         <ul className="review-issues">
@@ -991,7 +991,7 @@ export default function Shot({ projectId, jobs: live, setJobs, notify, go, caps,
                 <span className="run-n">{String(runs.length - i).padStart(2, '0')}</span>
               </span>
               <span className="run-chips mono">
-                {[run.plan?.engine === 'seedance' && `Seedance 2.5 ${run.plan.resolved?.draft ? 'Draft' : run.plan.resolved?.tier}`, MODE_NAME[req.mode] || req.mode, `${run.plan.resolved?.width}×${run.plan.resolved?.height}`, `${run.plan.resolved?.seconds} s`, run.plan?.engine !== 'seedance' && `seed ${req.seed}`, ch?.name, run.seconds && `${run.seconds} s render`]
+                {[run.plan?.engine === 'seedance' && `${run.plan.resolved?.model || 'Seedance 2.5'}${run.plan.resolved?.draft ? '' : ` ${String(run.plan.resolved?.tier || '').replace(/^flash/, '')}${/^flash/.test(run.plan.resolved?.tier) ? 'p' : ''}`}`, MODE_NAME[req.mode] || req.mode, `${run.plan.resolved?.width}×${run.plan.resolved?.height}`, `${run.plan.resolved?.seconds} s`, run.plan?.engine !== 'seedance' && `seed ${req.seed}`, ch?.name, run.seconds && `${run.seconds} s render`]
                   .filter(Boolean)
                   .map((c) => (
                     <span key={c}>{c}</span>

@@ -50,6 +50,7 @@ import CloudWizard from './components/CloudWizard'
 import { UpdateButton } from './components/Update'
 import { SizzleList, SizzleProject } from './components/Sizzle'
 import { RebuildList, RebuildProject } from './components/Rebuild'
+import { NavIcon } from './components/NavIcons'
 
 // The sidebar's two halves, switched at its foot (Visual | Audio; the visual half's id is still 'video').
 // Characters and Settings are in both; the Library (everything made, page 'media') sits above the switch and
@@ -265,6 +266,78 @@ export default function App() {
     setTrainingId(id)
     setPage('character')
   }
+
+  // Back and forward through the pages seen (the title bar's arrows, Alt+Left / Alt+Right, a mouse's side
+  // buttons). Each step keeps the page, its sidebar half and what it had open (a shot, a film, an edit...).
+  const here = { page, section, projectId, sequenceId, productionId, editId, trainingId, shinobiId, sizzleId, rebuildId }
+  const nav = useRef({ stack: [], at: -1, moving: false })
+  const [navAt, setNavAt] = useState({ back: false, forward: false })
+  const sameStep = (a, b) => !!a && !!b && Object.keys(here).every((k) => a[k] === b[k])
+  useEffect(() => {
+    const h = nav.current
+    if (h.moving) h.moving = false
+    else if (!sameStep(h.stack[h.at], here)) {
+      h.stack = [...h.stack.slice(0, h.at + 1), here].slice(-60)
+      h.at = h.stack.length - 1
+    }
+    setNavAt({ back: h.at > 0, forward: h.at < h.stack.length - 1 })
+  }, [page, section, projectId, sequenceId, productionId, editId, trainingId, shinobiId, sizzleId, rebuildId])
+  const step = (by) => {
+    const h = nav.current
+    const to = h.stack[h.at + by]
+    if (!to) return
+    h.at += by
+    h.moving = true
+    if (to.section !== section) {
+      setSection(to.section)
+      try {
+        localStorage.setItem('iv.section', to.section)
+      } catch {}
+    }
+    setProjectId(to.projectId)
+    setSequenceId(to.sequenceId)
+    setProductionId(to.productionId)
+    setEditId(to.editId)
+    setTrainingId(to.trainingId)
+    setShinobiId(to.shinobiId)
+    setSizzleId(to.sizzleId)
+    setRebuildId(to.rebuildId)
+    setPage(to.page)
+    if (sameStep(to, here)) h.moving = false
+  }
+  const stepRef = useRef(step)
+  stepRef.current = step
+  useEffect(() => {
+    const key = (e) => {
+      if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
+      if (e.key === 'ArrowLeft') (e.preventDefault(), stepRef.current(-1))
+      else if (e.key === 'ArrowRight') (e.preventDefault(), stepRef.current(1))
+    }
+    // a mouse's back (3) and forward (4) side buttons
+    const mouse = (e) => {
+      if (e.button === 3) (e.preventDefault(), stepRef.current(-1))
+      else if (e.button === 4) (e.preventDefault(), stepRef.current(1))
+    }
+    window.addEventListener('keydown', key)
+    window.addEventListener('mouseup', mouse)
+    return () => (window.removeEventListener('keydown', key), window.removeEventListener('mouseup', mouse))
+  }, [])
+
+  // The sidebar folds to a strip of page icons (the title bar's sidebar button); remembered.
+  const [navSmall, setNavSmall] = useState(() => {
+    try {
+      return localStorage.getItem('iv.navCollapsed') === '1'
+    } catch {
+      return false
+    }
+  })
+  const foldNav = () =>
+    setNavSmall((v) => {
+      try {
+        localStorage.setItem('iv.navCollapsed', v ? '0' : '1')
+      } catch {}
+      return !v
+    })
 
   const switchSection = (next) => {
     if (next === section) return
@@ -485,10 +558,21 @@ export default function App() {
   openRefNow.current = openRef
   useEffect(() => window.ivstudio.chat.onOpenInApp((w) => w?.kind && openRefNow.current(w.kind, w.id)), [])
   return (
-    <div className={`app ${incognito ? 'incognito' : ''} ${focus && page === 'edit' ? 'app-focus' : ''} ${info?.platform === 'darwin' ? 'mac' : ''} ${chatOpen && !chatPopped ? 'chat-on' : ''}`}>
+    <div className={`app ${incognito ? 'incognito' : ''} ${focus && page === 'edit' ? 'app-focus' : ''} ${info?.platform === 'darwin' ? 'mac' : ''} ${chatOpen && !chatPopped ? 'chat-on' : ''} ${navSmall ? 'nav-collapsed' : ''}`}>
       <header className="titlebar">
         {/* the IV logo is the Hivemind button: it glows softly and opens Hivemind when clicked */}
         <IVWorkspace api={ivWorkspaceApi} appId="studio" disabled={incognito} projectId={productionId} launcher={<img className="brand-logo" src={incognito ? ivMarkClosed : ivMark} alt="Infinite Variance" />} onOpen={r=>{if(r.kind==='production'){setWelcome(null);openProject(r.id)}}} />
+        <div className="nav-arrows">
+          <button className="nav-arrow" onClick={foldNav} aria-label={navSmall ? 'Show the sidebar' : 'Collapse the sidebar'} aria-pressed={navSmall} title={navSmall ? 'Show the sidebar' : 'Collapse the sidebar'}>
+            <NavIcon id="sidebar" className="nav-arrow-icon" />
+          </button>
+          <button className="nav-arrow" onClick={() => step(-1)} disabled={!navAt.back} aria-label="Back" title="Back (Alt+Left)">
+            <NavIcon id="back" className="nav-arrow-icon" />
+          </button>
+          <button className="nav-arrow" onClick={() => step(1)} disabled={!navAt.forward} aria-label="Forward" title="Forward (Alt+Right)">
+            <NavIcon id="forward" className="nav-arrow-icon" />
+          </button>
+        </div>
         <span className="mono brand-text">Infinite Variance</span>
         <span className="mono dim brand-text">/ Studio</span>
         {info?.testCopy && (
@@ -497,11 +581,24 @@ export default function App() {
           </span>
         )}
         {info && (
-          <button className={`incognito-switch mono ${incognito ? 'on' : ''}`} onClick={switchIncognito} title={incognito ? 'Leave Incognito (restarts IV Studio)' : 'Go Incognito: a private space (restarts IV Studio)'}>
-            <span className="switch-track">
-              <span className="switch-knob" />
-            </span>
+          <button className={`incognito-switch mono ${incognito ? 'on' : ''}`} aria-pressed={incognito} onClick={switchIncognito} title={incognito ? 'Leave Incognito (restarts IV Studio)' : 'Go Incognito: a private space (restarts IV Studio)'}>
+            {/* the IV eye: open in the normal space, shut in Incognito */}
+            <svg className="incognito-eye" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              {incognito ? (
+                <>
+                  <path d="M2.5 10.5c2.6 3.4 5.8 5 9.5 5s6.9-1.6 9.5-5" />
+                  <path d="M5.5 13.6l-1.6 2.2M9.4 15.2l-.7 2.6M14.6 15.2l.7 2.6M18.5 13.6l1.6 2.2" />
+                </>
+              ) : (
+                <>
+                  <path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z" />
+                  <circle cx="12" cy="12" r="3.2" />
+                  <circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none" />
+                </>
+              )}
+            </svg>
             <span className="incognito-label">Incognito</span>
+            <span className="incognito-state">{incognito ? 'On' : 'Off'}</span>
           </button>
         )}
         <AgentPill status={agentStatus} onOpen={() => window.dispatchEvent(new CustomEvent('iv:go', { detail: { page: 'home', section: 'video' } }))} />
@@ -517,7 +614,6 @@ export default function App() {
           )}
           {/* on a Mac the cloud comes first; Start ComfyUI stays on Settings → Setup */}
           {comfyDown && info?.platform !== 'darwin' && <StartComfy notify={notify} recheck={recheck} className="btn btn-small engine-start" />}
-          {setup?.items?.find((i) => i.id === 'gpu') && <span className="mono dim engine-gpu">{setup.items.find((i) => i.id === 'gpu').detail}</span>}
           <SetupPill onOpen={() => setPage('cloud')} />
           {setup?.remote ? <CloudMeter onOpen={() => setPage('cloud')} /> : setup && <SystemMeter notify={notify} />}
           <BalanceChip />
@@ -525,21 +621,24 @@ export default function App() {
       </header>
       <nav className="nav">
         {SECTIONS[section].map(([id, label], i) => (
-          <button key={id} className={`nav-item ${page === id || SUBPAGES[id]?.includes(page) ? 'on' : ''}`} onClick={() => setPage(id)}>
-            <span className="mono dim">{String(i + 1).padStart(2, '0')}</span>
-            {label}
+          <button key={id} className={`nav-item ${page === id || SUBPAGES[id]?.includes(page) ? 'on' : ''}`} onClick={() => setPage(id)} title={navSmall ? label : undefined} aria-label={navSmall ? label : undefined}>
+            <NavIcon id={id} />
+            <span className="mono dim nav-num">{String(i + 1).padStart(2, '0')}</span>
+            <span className="nav-label">{label}</span>
             {id === 'settings' && missing > 0 && <span className="nav-dot" />}
           </button>
         ))}
         <div className="nav-foot mono">
           <RenderQueue remote={!!setup?.remote} notify={notify} open={openQueued} />
-          <button className={`nav-library ${page === 'media' ? 'on' : ''}`} onClick={() => setPage('media')}>
-            Library
+          <button className={`nav-library ${page === 'media' ? 'on' : ''}`} onClick={() => setPage('media')} title={navSmall ? 'Library' : undefined} aria-label={navSmall ? 'Library' : undefined}>
+            <NavIcon id="media" />
+            <span className="nav-label">Library</span>
           </button>
           <div className="section-switch" role="tablist" aria-label="Visual or audio">
             {['video', 'audio'].map((id) => (
-              <button key={id} role="tab" aria-selected={section === id} className={section === id ? 'on' : ''} onClick={() => switchSection(id)}>
-                {id === 'video' ? 'Visual' : 'Audio'}
+              <button key={id} role="tab" aria-selected={section === id} className={section === id ? 'on' : ''} onClick={() => switchSection(id)} title={navSmall ? (id === 'video' ? 'Visual' : 'Audio') : undefined} aria-label={id === 'video' ? 'Visual' : 'Audio'}>
+                <NavIcon id={id === 'video' ? 'visual' : 'audio'} />
+                <span className="nav-label">{id === 'video' ? 'Visual' : 'Audio'}</span>
               </button>
             ))}
           </div>

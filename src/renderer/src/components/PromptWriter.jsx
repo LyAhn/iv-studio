@@ -4,7 +4,7 @@ import { ask } from './Confirm'
 import StageBoard from './StageBoard'
 import { cameraWords, defaultStage, previsWords, stagingWords } from '../../../service/staging'
 
-const HARNESS_NAME = { claude: 'Claude Code', codex: 'Codex', hermes: 'Hermes' }
+const HARNESS_NAME = { claude: 'Claude', codex: 'ChatGPT', hermes: 'Hermes' }
 
 // An idea from somewhere else (Create's banner bar, the Dashboard's "What do you want to make?") for Create's own
 // writer: it fills in the idea and, with write, writes the prompt straight away. Kept until a listening writer takes

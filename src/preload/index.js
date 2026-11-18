@@ -344,7 +344,7 @@ contextBridge.exposeInMainWorld('ivstudio', {
   batches: { list: call('batches:list'), dailies: call('batches:dailies') },
   turnaround: { status: call('turnaround:status'), list: call('turnaround:list'), make: call('turnaround:make'), delete: call('turnaround:delete') },
   refmods: { list: call('refmods:list'), ready: call('refmods:ready'), make: call('refmods:make'), onStatus: on('refmods:status') },
-  characters: { list: call('characters:list'), save: call('characters:save'), catalog: call('characters:catalog'), install: call('characters:install'), loras: call('characters:loras'), onProgress: on('characters:progress') },
+  characters: { list: call('characters:list'), save: call('characters:save'), catalog: call('characters:catalog'), install: call('characters:install'), loras: call('characters:loras'), onProgress: on('characters:progress'), saveOne: call('characters:saveOne'), addPictures: call('characters:addPictures'), removePicture: call('characters:removePicture') },
   projects: { list: call('projects:list'), get: call('projects:get'), rename: call('projects:rename'), delete: call('projects:delete') },
   sequences: {
     list: call('sequences:list'),
@@ -367,7 +367,7 @@ contextBridge.exposeInMainWorld('ivstudio', {
   // Create's last setup and saved templates (src/service/createmem.js)
   createMemory: { get: call('createmem:get'), saveLast: call('createmem:saveLast'), clearLast: call('createmem:clearLast'), saveTemplate: call('createmem:saveTemplate'), deleteTemplate: call('createmem:deleteTemplate') },
   cast: { list: call('cast:list'), places: call('cast:places'), savePlace: call('cast:savePlace'), deletePlace: call('cast:deletePlace') },
-  render: { plan: call('render:plan'), planFinish: call('render:planFinish'), price: call('render:price'), priceFinish: call('render:priceFinish'), previews: call('render:previews'), finish: call('render:finish'), enhance: call('render:enhance') },
+  render: { plan: call('render:plan'), planFinish: call('render:planFinish'), price: call('render:price'), priceFinish: call('render:priceFinish'), previews: call('render:previews'), finish: call('render:finish'), enhance: call('render:enhance'), seedanceTiers: call('render:seedanceTiers') },
   jobs: { watch: call('jobs:watch'), cancel: call('jobs:cancel'), onUpdate: on('jobs:update'), onLive: on('jobs:live') },
   files: { pick: call('files:pick'), reveal: call('files:reveal'), open: call('files:open') },
   links: { open: call('links:open') },

@@ -71,14 +71,14 @@ export async function localWriterModel(model, { needsEyes = null } = {}) {
     // a server that lists its models must list this one; one that doesn't list (or can't be asked) is tried anyway
     const listed = await openaiModels(cfg).catch((err) => (/refused the key/.test(err.message) ? Promise.reject(err) : []))
     if (listed.length && !listed.includes(cfg.model)) throw new Error(`The OpenAI-compatible server at ${cfg.url} doesn't list the model "${cfg.model}". Choose one of its models in Settings → Prompt writer.`)
-    if (needsEyes && !cfg.vision) throw new Error(`The OpenAI-compatible writer is set to not see pictures, so it can't ${needsEyes}. If ${cfg.model} can, turn on "It can see pictures" in Settings → Prompt writer, or choose Claude Code or Codex.`)
+    if (needsEyes && !cfg.vision) throw new Error(`The OpenAI-compatible writer is set to not see pictures, so it can't ${needsEyes}. If ${cfg.model} can, turn on "It can see pictures" in Settings → Prompt writer, or choose Claude or ChatGPT.`)
     return { name: cfg.model, vision: cfg.vision, provider: 'openai' }
   }
   await ensureOllama()
   const name = model || DEFAULT_LOCAL_MODEL
   const info = (await ollamaStatus()).models.find((m) => m.name === name)
   if (!info) throw new Error(`The writer model ${name} isn't in Ollama yet. Install it in Settings → Prompt writer.`)
-  if (needsEyes && !info.vision) throw new Error(`${name} can't see pictures, so it can't ${needsEyes}. Choose a vision model, Claude Code or Codex in Settings → Prompt writer.`)
+  if (needsEyes && !info.vision) throw new Error(`${name} can't see pictures, so it can't ${needsEyes}. Choose a vision model, Claude or ChatGPT in Settings → Prompt writer.`)
   return { name, vision: info.vision, provider: 'ollama' }
 }
 

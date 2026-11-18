@@ -36,7 +36,7 @@ export function UpdateButton({ notify }) {
         Updating to {u.available} · {Math.round(u.percent || 0)}%
       </span>
     )
-  return <span>v{u?.version}</span>
+  return <span className="nav-version">v{u?.version}</span>
 }
 
 const when = (iso) => (iso ? new Date(iso).toLocaleString() : null)

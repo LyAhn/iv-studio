@@ -140,7 +140,8 @@ export function planPreviews(request, characters) {
   }
   if (refChar) values['1004'] = refChar.name
   else if (character) {
-    values['1001.LoraLoaderState'] = loraState([{ name: character.lora, strength: character.strength }])
+    // the character's main H3 LoRA, and any more its bible loads with it (bible.js models.h3.loras)
+    values['1001.LoraLoaderState'] = loraState([{ name: character.lora, strength: character.strength }, ...(character.models?.h3?.loras || [])])
     values['1002'] = character.trigger
   }
   const mediaNode = { frames: '202', reference: '302', continue: '602' }[r.mode]

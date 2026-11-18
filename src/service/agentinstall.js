@@ -10,8 +10,8 @@ import os from 'node:os'
 import path from 'node:path'
 
 export const AGENT_INFO = {
-  claude: { name: 'Claude Code', maker: 'Anthropic', plan: 'Needs a paid Claude plan (Pro, Max, Team or Enterprise).', site: 'https://code.claude.com/docs/en/setup' },
-  codex: { name: 'Codex', maker: 'OpenAI', plan: 'Needs a ChatGPT plan.', site: 'https://developers.openai.com/codex/cli' }
+  claude: { name: 'Claude', maker: 'Anthropic', plan: 'Needs a paid Claude plan (Pro, Max, Team or Enterprise).', site: 'https://code.claude.com/docs/en/setup' },
+  codex: { name: 'ChatGPT', maker: 'OpenAI', plan: 'Needs a ChatGPT plan.', site: 'https://developers.openai.com/codex/cli' }
 }
 
 const SCRIPTS = {
@@ -20,7 +20,7 @@ const SCRIPTS = {
 }
 
 const known = (engine) => {
-  if (!SCRIPTS[engine]) throw new Error('IV Studio can install Claude Code or Codex.')
+  if (!SCRIPTS[engine]) throw new Error('IV Studio can install Claude or ChatGPT.')
 }
 
 // The official one-liner for this computer, run without a window and without questions (Codex's installer asks

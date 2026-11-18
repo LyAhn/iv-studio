@@ -97,7 +97,7 @@ export default function IVWorkspace({ api, appId, nativeId, nativeName, onOpen, 
         <p>Hivemind sits on your desktop and connects IV Outreach, IV Signal and IV Studio.</p>
         <ul>
           <li><b>One profile everywhere.</b> Pick the profile you're working on once and every IV app follows it, with the same memory of you and that profile.</li>
-          <li><b>Just ask.</b> Its chat runs on your own Claude Code or Codex and does the work in the right app while you watch. Anything that needs your OK waits for you.</li>
+          <li><b>Just ask.</b> Its chat runs on your own Claude or ChatGPT and does the work in the right app while you watch. Anything that needs your OK waits for you.</li>
           <li><b>Pick up where you left off.</b> Handoffs between the apps are one click away.</li>
         </ul>
         {activeName && <p className="ivw-intro-active">Working on <b>{activeName}</b></p>}

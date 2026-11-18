@@ -89,7 +89,7 @@ await ok('a usage limit or a refusal comes back as what Codex said', async () =>
 await ok('ready only with Codex installed and signed in; the family takes four pictures and has no LoRAs or seed', () => {
   const none = codexImageStatus({ LOCALAPPDATA: path.join(tmp, 'nothing'), APPDATA: path.join(tmp, 'nothing'), PATH: '', CODEX_HOME: home }, tmp, process.platform)
   assert.equal(none.ready, false)
-  assert.ok(none.missing[0].startsWith('Codex'))
+  assert.ok(none.missing[0].startsWith('ChatGPT'))
   const fam = codexFamilyStatus({ ready: false, missing: ['x'] })
   assert.equal(fam.ready, false)
   assert.deepEqual(fam.models, [])

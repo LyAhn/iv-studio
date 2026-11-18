@@ -120,7 +120,7 @@ function loaders(template, character, unet, extra = []) {
     turbo: { class_type: 'LoraLoaderModelOnly', inputs: { model: ['unet', 0], lora_name: template['5'].inputs.lora_name, strength_model: 1 } }
   }
   let model = ['turbo', 0]
-  if (character && !character.lora) throw new Error(`${character.name} is a RefMod character; sequences need a character with a LoRA. Use Create for RefMod characters.`)
+  if (character && !character.lora) throw new Error(`${character.name} has no H3 LoRA, and a one take needs one. Use Shot by shot, or add an H3 LoRA in their character page.`)
   if (character) {
     g.char = { class_type: 'LoraLoaderModelOnly', inputs: { model, lora_name: character.lora, strength_model: character.strength ?? 0.8 } }
     model = ['char', 0]
@@ -141,7 +141,8 @@ export function validateSequence(seq, characters, { face = null } = {}) {
   const errors = []
   const character = seq.character === 'none' ? null : characters.find((c) => c.id === seq.character)
   if (seq.character !== 'none' && !character) errors.push(`Unknown character "${seq.character}".`)
-  if (character && !character.lora) errors.push(`${character.name} is a RefMod character; sequences need a character with a LoRA. Use Create for RefMod characters.`)
+  // a one take loads the character's LoRA itself; shot by shot renders each shot like Create (their RefMod or picture works)
+  if (character && !character.lora && (seq.method || 'take') === 'take') errors.push(`${character.name} has no H3 LoRA, and a one take needs one. Use Shot by shot (it uses their ${character.refmod ? 'RefMod' : 'picture'}), or add an H3 LoRA in their character page.`)
   if (!seq.shots?.length) errors.push('Add at least one shot.')
   seq.shots?.forEach((s, i) => !s.prompt?.trim() && errors.push(`Shot ${i + 1} has no prompt.`))
   if (seq.shots?.length > 8) errors.push('At most 8 shots in one take.')

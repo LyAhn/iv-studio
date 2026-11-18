@@ -295,7 +295,7 @@ export class Rebuilds {
   async readWithWriter(id, { only = null } = {}) {
     const r = this.get(id)
     const w = this.writer()
-    if (!['local', 'claude', 'codex'].includes(w.engine)) throw new Error('Rebuild reads shots with the local writer, Claude Code or Codex. Choose one in Settings → Prompt writer.')
+    if (!['local', 'claude', 'codex'].includes(w.engine)) throw new Error('Rebuild reads shots with the local writer, Claude or ChatGPT. Choose one in Settings → Prompt writer.')
     const todo = r.shots.filter((s) => (only ? only.includes(s.index) : !s.reading))
     const answers = []
     for (const s of todo) {

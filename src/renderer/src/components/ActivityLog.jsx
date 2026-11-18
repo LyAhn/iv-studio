@@ -86,7 +86,7 @@ export default function ActivityLog({ notify, openRef }) {
         <p className="small dim activity-empty">Loading…</p>
       ) : !items.length ? (
         <p className="small dim activity-empty">
-          {problems ? 'No failed steps in the last two weeks.' : 'Nothing yet. When an agent makes, changes or spends something in IV Studio, it shows here: the chat, Dashboard ideas, and Claude Desktop, Codex or any agent using IV Studio from outside.'}
+          {problems ? 'No failed steps in the last two weeks.' : 'Nothing yet. When an agent makes, changes or spends something in IV Studio, it shows here: the chat, Dashboard ideas, and Claude Desktop, ChatGPT or any agent using IV Studio from outside.'}
         </p>
       ) : (
         <div className="activity-days">

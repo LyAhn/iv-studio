@@ -7,7 +7,7 @@ export const NEWS = [
       { text: 'New: Music video (Workflows). Pick a song; IV Studio finds its beat and parts and cuts it into scenes on the bars. Your cast sings and plays along to each scene’s own stretch of the song, and Make the edit lays the finished scenes over the song.' },
       { text: 'Music video references: add pictures of people, products, places or things, and pick which scenes show them. A product keeps its shape, colours and label.' },
       { text: 'The welcome wizard fits the window: no more scrolling. A step with a lot in it shows a page at a time.' },
-      { text: 'Fixed: Codex refused IV Studio’s tools when its approvals were off (GitHub #44).' },
+      { text: 'Fixed: ChatGPT refused IV Studio’s tools when its approvals were off (GitHub #44).' },
       { text: 'Fixed: a sequence’s story shot count went back to 3 if you left while it was writing (GitHub #43).' },
       { text: 'Fixed: the infinitevariance.ai link at the bottom of the sidebar could wrap onto two lines (GitHub #42).' }
     ]
@@ -21,7 +21,7 @@ export const NEWS = [
   {
     version: '1.1.16',
     items: [
-      { text: 'Local AI in the chat: pick it beside Claude Code, Codex and Hermes and the chat runs on a model in your own Ollama, free and on your PC. It has IV Studio’s everyday tools and the same Allow cards.' },
+      { text: 'Local AI in the chat: pick it beside Claude, ChatGPT and Hermes and the chat runs on a model in your own Ollama, free and on your PC. It has IV Studio’s everyday tools and the same Allow cards.' },
       { text: 'Create remembers your last setup: it opens the way you left it or last ran it. + New starts over.' },
       { text: 'Create templates: Save as template keeps a setup under a name (the prompt and files only if you want), and Templates fills the form from one. On Video and Image.' },
       { text: 'The live preview says when a render started with the switch off, instead of a confusing message about KJNodes.' }
@@ -50,7 +50,7 @@ export const NEWS = [
   {
     version: '1.1.10',
     items: [
-      { text: 'ChatGPT Images in Create → Image: if Codex is installed and signed in to ChatGPT, pick ChatGPT Images beside your ComfyUI models. It makes pictures from a prompt or edits one (up to four pictures), in any shape, on your own ChatGPT plan, even with ComfyUI off.' },
+      { text: 'ChatGPT Images in Create → Image: if ChatGPT is installed and signed in, pick ChatGPT Images beside your ComfyUI models. It makes pictures from a prompt or edits one (up to four pictures), in any shape, on your own ChatGPT plan, even with ComfyUI off.' },
       { text: 'Your agent can make ChatGPT pictures too (make_image with model chatgpt-images).' }
     ]
   },
@@ -77,7 +77,7 @@ export const NEWS = [
     items: [
       { text: 'A simpler welcome: it starts by asking how much you know about AI video. New to it? Everyday words, fewer choices, and IV Studio picks the settings for you. Then name yourself, your helper and your colour, and it checks your PC.' },
       { text: 'The Cinematography menu shows a picture for every setup: the same scene with each film stock, lens, light, camera move and mood, so you can see the difference before you pick. It opens from a new Cinematography button.' },
-      { text: 'Hermes can write your prompts: pick it in Settings → Prompt writer, beside Claude Code and Codex.' },
+      { text: 'Hermes can write your prompts: pick it in Settings → Prompt writer, beside Claude and ChatGPT.' },
       { text: 'Start from an example and Stage it on a board open as pop-ups on Create.' }
     ]
   },
@@ -87,7 +87,7 @@ export const NEWS = [
       { text: 'Fixed: Write it for me said Unknown writer "h3" when H3 was the shot’s model (for example after Use in a shot). It uses the writer from Settings again.' },
       { text: 'The editor’s razor (C) is a red katana now: a dashed line shows where it will cut, and each cut slashes the clip in two.' },
       { text: 'Pick a colour: red (the default), blue, purple, orange or Dark (greys only), in Settings → Accessibility or when IV Studio first opens. Buttons, highlights and the artwork all follow it.' },
-      { text: 'Name your agent, and tell it your name: when IV Studio first opens or in Settings → You and your agent. It answers to its name in the chat and on the Dashboard, and runs on Claude Code, Codex or Hermes, your pick.' },
+      { text: 'Name your agent, and tell it your name: when IV Studio first opens or in Settings → You and your agent. It answers to its name in the chat and on the Dashboard, and runs on Claude, ChatGPT or Hermes, your pick.' },
       { text: 'Select, Ripple and Roll have their own red cursors too, in the katana’s style.' },
       { text: 'Replace leads the Workflows page.' },
       { text: 'Scroll bars in the app’s colours, the sidebar fits short windows, and Setup no longer scrolls sideways.' },
@@ -103,7 +103,7 @@ export const NEWS = [
   {
     version: '1.1.4',
     items: [
-      { text: 'Hermes in the chat: pick Hermes beside Claude Code and Codex, and your own Hermes Agent works in IV Studio with every IV Studio tool, on the model you chose in Hermes. Anything Hermes would run outside IV Studio is declined.' },
+      { text: 'Hermes in the chat: pick Hermes beside Claude and ChatGPT, and your own Hermes Agent works in IV Studio with every IV Studio tool, on the model you chose in Hermes. Anything Hermes would run outside IV Studio is declined.' },
       { text: 'History: a tab in the chat lists your earlier conversations, newest first, with which agent and when. Open one to carry on where you left off.' },
       { text: 'And the other way round: the IV Studio plugin for Hermes (github.com/hollisorg/hermes-iv-studio) makes Hermes’s own video and picture tools render here, on your GPU, for free.' }
     ]
@@ -115,7 +115,7 @@ export const NEWS = [
       { text: 'Read aloud: the speaker in the chat’s header reads each reply in one of your voices (Audio → Voices).' },
       { text: 'A cleaner chat: your messages and the agent’s in bubbles with times, each agent in its own colour, and one rounded box to write in.' },
       { text: 'Pop the chat out into its own window (the arrow in its header), keep it on top, and put it back in the app when you’re done. It still knows what’s open in IV Studio.' },
-      { text: 'Activity: a tab in the chat that lists everything agents did in IV Studio (the chat, Dashboard ideas, and Claude Desktop, Codex or any agent using IV Studio from outside), with links to what they made and Undo for changes to an edit.' },
+      { text: 'Activity: a tab in the chat that lists everything agents did in IV Studio (the chat, Dashboard ideas, and Claude Desktop, ChatGPT or any agent using IV Studio from outside), with links to what they made and Undo for changes to an edit.' },
       { text: 'The chat knows more about what you’re looking at: the version you picked on a shot, the clip and playhead in the editor, the item open in the Library, how Create is set up, what’s rendering, and the last render that failed.' },
       { text: 'See how full the agent’s working memory is, and this chat’s usage, in the chat’s header. You’ll see a note when it summarizes earlier messages to make room.' },
       { text: 'Create → Image: a model that isn’t set up opens what it needs, with one button that downloads it. Flux.2 Klein, Flux 3 Klein, Krea 2, Moss and Qwen Image 2.1 can now be downloaded from IV Studio.' },
@@ -143,7 +143,7 @@ export const NEWS = [
     version: '1.1.0',
     items: [
       { text: 'The rules for MiniMax H3: before your first H3 render, IV Studio shows them in plain words and asks you to agree to its terms once. Read them again, or report misuse, in Settings › About.' },
-      { text: 'Chat with your own Claude Code or Codex: the Chat button in the title bar. It can use everything IV Studio does and knows which page you’re on. Before anything that deletes, costs money, installs or changes a setting, it asks you first.' },
+      { text: 'Chat with your own Claude or ChatGPT: the Chat button in the title bar. It can use everything IV Studio does and knows which page you’re on. Before anything that deletes, costs money, installs or changes a setting, it asks you first.' },
       { text: 'Ask it from anywhere: Ask … to fix it on a failed render, to pick the best take on a shot, or about a picture in the Library. Drop pictures, videos, sound or a script into the chat.' },
       { text: 'Show me where: ask where something is, and IV Studio goes there and lights it up.' },
       { text: 'Edit by talking: on an edit, press Ask … and say “tighten the middle” or “put captions on” (captions are new). Every change can be undone from the chat.' },
@@ -151,7 +151,7 @@ export const NEWS = [
       { text: 'Overnight batches: up to 12 variations of an idea render while you’re away, and a report with the best takes is waiting in the chat.' },
       { text: 'A short film in one conversation: Make one with … on Projects takes an idea to a rough cut, stopping for your OK at each step.' },
       { text: 'A spending limit for the chat in Settings → Agents, off unless you turn it on. Seedance works from the chat too.' },
-      { text: 'Let Claude Code or Codex make a Dashboard idea for you, and install either one from Check my PC or Settings → Agents.' },
+      { text: 'Let Claude or ChatGPT make a Dashboard idea for you, and install either one from Check my PC or Settings → Agents.' },
       { text: 'MiniMax H3 Image in Create → Image: big 4, 8 or 16 MP pictures that follow long descriptions. It needs ComfyUI 0.45 or newer and a 22 GB download.' },
       { text: 'Nearly everything now runs on your own RunPod or Modal: pictures, effects, music, sounds, voices, Replace and more. The models it needs download the first time, after you agree.' },
       { text: 'Want IV Studio to run the cloud for you? Join the cloud beta on the Cloud page or in Settings → Privacy.' },
@@ -169,7 +169,7 @@ export const NEWS = [
       { text: 'Closing and reopening IV Studio while ComfyUI starts no longer starts a second ComfyUI.' },
       { text: 'Film craft in Projects: coverage plans for a scene (dialogue, entrance, parallel action and more), a continuity check like a script supervisor’s, a Lookbook from any film or cinematographer, and a shot list as a document or CSV.' },
       { text: 'Cinematography and prompt tools in Create and on every film shot: 165 setups (film stocks, lenses, light, camera rigs, moods), a director’s note, Tighten, Enrich, a new angle and 3 variants, with earlier versions kept.' },
-      { text: 'Projects writes the script and plans the storyboard with your chosen prompt writer, Claude Code and Codex included.' },
+      { text: 'Projects writes the script and plans the storyboard with your chosen prompt writer, Claude and ChatGPT included.' },
       { text: 'A new prompt writer: OpenAI-compatible. Point it at llama.cpp, llama-swap, vLLM, LM Studio, LiteLLM, OpenAI or any server with the OpenAI API, with an optional key and extra headers (Settings → Prompt writer).' },
       { text: 'Fixed: a switch (like Music’s Instrumental) could scroll the whole window, pushing the title bar off screen. Sequences with a voice no longer send the prompt’s section names twice.' },
       { text: 'Seedance 2.5 in Create: a model switch beside MiniMax H3, on your Comfy.org credits. Cheap 480p drafts or 720p and 1080p takes, 4 to 30 seconds; the price shows first and you confirm before anything is charged.' },
@@ -249,7 +249,7 @@ export const NEWS = [
       { text: 'Sequences take LoRAs: add up to four in Look and size and every shot uses them, in one take, retakes and shot by shot.' },
       { text: 'Edit and run again on a sequence’s shot now opens that shot in its sequence, so the new render stays part of it. Renders that came loose before can be put back with Use as shot N.' },
       { text: 'Move IV Studio’s data folder to another drive in Settings → Data folder. There’s also a portable Windows zip that keeps everything in a folder beside IV Studio.exe.' },
-      { text: 'Rebuild, a new workflow: bring a video you made and IV Studio reads it shot by shot. Your agent (Claude Code or Codex) plans how each shot is remade, you approve the plan and the frames, H3 renders the new shots, and a first cut lands in Edit.' },
+      { text: 'Rebuild, a new workflow: bring a video you made and IV Studio reads it shot by shot. Your agent (Claude or ChatGPT) plans how each shot is remade, you approve the plan and the frames, H3 renders the new shots, and a first cut lands in Edit.' },
       { text: 'Every workflow now says what it needs, on its card and on its page.' }
     ]
   },
@@ -324,7 +324,7 @@ export const NEWS = [
     version: '0.2.8',
     items: [
       { text: 'IV Studio runs on Linux too: an AppImage that updates itself, and it starts your ComfyUI from its .sh script or main.py.' },
-      { text: 'On Linux, Settings → Agents gives Claude Code or Codex a command that works from the AppImage.' }
+      { text: 'On Linux, Settings → Agents gives Claude or ChatGPT a command that works from the AppImage.' }
     ]
   },
   {
@@ -358,7 +358,7 @@ export const NEWS = [
       { text: 'Made-up people in a film keep one face: drawn, or your own picture (Use a picture). Someone who never speaks, like a dog, can be added too.' },
       { text: 'More angles of a place keep every shot in the same room.' },
       { text: 'One-take shots carry straight on from the shot before.' },
-      { text: 'Write it for me can use Claude Code or Codex, follows MiniMax’s own guide, and looks at your references.' },
+      { text: 'Write it for me can use Claude or ChatGPT, follows MiniMax’s own guide, and looks at your references.' },
       { text: 'Stage a shot on a board; arcs film from a previs.' },
       { text: 'Takes are ranked, compared side by side and reviewed with one suggested fix.' },
       { text: 'Finish with DLSS 5 or SeedVR2; live previews while takes render.' },

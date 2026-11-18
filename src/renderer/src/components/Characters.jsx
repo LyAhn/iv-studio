@@ -10,6 +10,7 @@ import { fileUrl } from './edit/model'
 import { media } from '../media'
 import { StepHead } from './CreateKit'
 import { LoraIcon, RefModIcon, RefModMaker, RefModPicker, SourceChooser } from './CharacterSources'
+import CharacterProfile from './CharacterProfile'
 
 const STEPS = [
   ['design', 'Design'],
@@ -34,12 +35,14 @@ const src = (file) => (file?.url ? media(file.url) : file?.path ? fileUrl(file.p
 
 // Every character in one place: the ones you can use now (presets), ready-made ones to download, and
 // characters you're designing or training. Each is a portrait card; its settings open in a pop-up.
-export function CharacterList({ openCharacter, notify, characters, setCharacters, go, startShotWith, setup }) {
+export function CharacterList({ openCharacter, openShot, notify, characters, setCharacters, go, startShotWith, setup }) {
   const pcCanTrain = usePcCanTrain(setup)
   const [list, setList] = useState(null)
   // which character's LoRA the picker is choosing ('new' adds a character)
   const [pickFor, setPickFor] = useState(null)
   const [editing, setEditing] = useState(null)
+  // the profile's first tab when it opens (a character made from photos opens on Pictures)
+  const [editTab, setEditTab] = useState('look')
   const [ready, setReady] = useState([])
   const [loras, setLoras] = useState([])
   const [progress, setProgress] = useState({})
@@ -71,6 +74,22 @@ export function CharacterList({ openCharacter, notify, characters, setCharacters
   async function saveCharacter(id, patch) {
     setCharacters(await C.save(characters.map((c) => (c.id === id ? { ...c, ...patch } : c))))
   }
+  const refresh = async () => setCharacters(await C.list())
+  const openBible = (id, tab = 'look') => (setEditTab(tab), setEditing(id))
+  // a new character from photos: name it, pick the pictures, and its bible opens on Pictures
+  async function fromPhotos(newName) {
+    const files = await window.ivstudio.files.pick('picture')
+    if (!files.length) return
+    try {
+      const made = await C.saveOne({ name: newName })
+      await C.addPictures({ id: made.id, files })
+      await refresh()
+      setAdding(null)
+      openBible(made.id, 'pictures')
+    } catch (err) {
+      notify(err.message)
+    }
+  }
   async function install(id) {
     setProgress((x) => ({ ...x, [id]: 0 }))
     try {
@@ -86,9 +105,11 @@ export function CharacterList({ openCharacter, notify, characters, setCharacters
     }
   }
   const has = (lora) => loras.some((l) => l.replace(/\\/g, '/').toLowerCase() === String(lora).replace(/\\/g, '/').toLowerCase())
-  // a RefMod character needs its RefMod in ComfyUI; any other its LoRA
+  // a RefMod character needs its RefMod in ComfyUI; a LoRA one its LoRA; one with neither (pictures or words) needs
+  // nothing there
   const isRef = (c) => !c.lora && !!c.refmod
-  const found = (c) => (isRef(c) ? refmods.includes(c.refmod) : has(c.lora))
+  const bibleOnly = (c) => !c.lora && !c.refmod
+  const found = (c) => (bibleOnly(c) ? true : isRef(c) ? refmods.includes(c.refmod) : has(c.lora))
   const offered = ready.filter((r) => !characters.some((c) => c.id === r.id))
   const face = (c) => c.picture || ready.find((r) => r.id === c.id)?.picture
   const voiceOf = (c) => voices.find((v) => v.id === c.voiceId)
@@ -98,12 +119,14 @@ export function CharacterList({ openCharacter, notify, characters, setCharacters
 
   return (
     <div className="characters">
+      {!open && (
+      <>
       <Stage effect="halo" art="characters" title="Characters" kicker="Your recurring actors">
         {/* the same name as Train your own -> Design and train below: a new character to design */}
         <QuickBar label="A new character's name" placeholder="Name a new character, e.g. Maya Ortiz" value={name} onChange={setName} goLabel="Design them" disabled={!name.trim()} onGo={create} />
       </Stage>
       <p className="lede cast-lede">
-        The people H3 plays, the same in every shot.
+        Your recurring actors, the same in every shot and every model: their look, pictures, voice and LoRAs in one place.
         <span className="lede-small dim">
           Pick one in Create or Sequences and write <span className="mono">{'{char}'}</span> where they go.
         </span>
@@ -120,7 +143,7 @@ export function CharacterList({ openCharacter, notify, characters, setCharacters
           <h2>
             Your characters <span className="cast-count mono">{characters.length}</span>
           </h2>
-          <p className="dim small">Ready to use in Create, Sequences and Replace. Click one to change its settings.</p>
+          <p className="dim small">Ready to use in Create, Sequences and Replace. Click one to open their character page.</p>
         </div>
         <div className="cast-grid">
           {characters.map((c) => {
@@ -128,14 +151,15 @@ export function CharacterList({ openCharacter, notify, characters, setCharacters
             const v = voiceOf(c)
             return (
               <div key={c.id} className="portrait">
-                <button className="portrait-open" onClick={() => setEditing(c.id)} aria-label={`${c.name}: settings`}>
+                <button className="portrait-open" onClick={() => openBible(c.id)} aria-label={`${c.name}: their bible`}>
                   <span className="portrait-face">{face(c) ? <img src={fileUrl(face(c))} alt="" /> : <span className="portrait-initial">{c.name.slice(0, 1)}</span>}</span>
                   {!ok && <span className="portrait-flag mono">{isRef(c) ? 'RefMod missing' : 'LoRA missing'}</span>}
                   {ok && isRef(c) && <span className="portrait-flag mono ok">RefMod</span>}
+                  {bibleOnly(c) && <span className="portrait-flag mono ok">{c.pictures?.length ? `${c.pictures.length} picture${c.pictures.length > 1 ? 's' : ''}` : 'Words only'}</span>}
                   <span className="portrait-body">
                     <span className="portrait-name">{c.name}</span>
                     <span className="portrait-meta mono">
-                      {isRef(c) ? 'RefMod' : c.trigger} · {!v ? 'no voice' : v.name === c.name ? 'own voice' : v.name}
+                      {isRef(c) ? 'RefMod' : bibleOnly(c) ? c.about || 'no LoRA' : c.trigger} · {!v ? 'no voice' : v.name === c.name ? 'own voice' : v.name}
                     </span>
                   </span>
                 </button>
@@ -147,10 +171,10 @@ export function CharacterList({ openCharacter, notify, characters, setCharacters
               </div>
             )
           })}
-          <button className="portrait portrait-add" onClick={() => setAdding('choose')}>
+          <button className="portrait portrait-add" onClick={() => setAdding('new')}>
             <span className="portrait-plus">+</span>
-            <span className="portrait-name">Add from a LoRA or RefMod</span>
-            <span className="dim small">One you already have in ComfyUI</span>
+            <span className="portrait-name">New character</span>
+            <span className="dim small">From photos, a LoRA you have, or both</span>
           </button>
         </div>
       </section>
@@ -248,7 +272,7 @@ export function CharacterList({ openCharacter, notify, characters, setCharacters
                 setCharacters(await C.list())
                 window.ivstudio.refmods.list().then(setRefmods, () => {})
                 setPath(null)
-                setEditing(c.id)
+                openBible(c.id, 'models')
               }}
             />
           </div>
@@ -277,33 +301,38 @@ export function CharacterList({ openCharacter, notify, characters, setCharacters
         )}
       </section>
 
+      </>
+      )}
       {open && (
-        <CharacterSettings
+        <CharacterProfile
           c={open}
           face={face(open)}
-          found={found(open)}
+          hasLora={(l) => !l || has(l) || !loras.length}
           isRef={isRef(open)}
-          chooseRefMod={() => setAdding(open.id)}
-          offer={ready.find((r) => r.id === open.id && r.available)}
           voices={voices}
+          offer={ready.find((r) => r.id === open.id && r.available)}
           progress={progress[open.id]}
           downloadLabel={downloadLabel}
-          picking={!!pickFor || !!adding}
-          save={(patch) => saveCharacter(open.id, patch)}
           install={() => install(open.id)}
           chooseLora={() => setPickFor(open.id)}
-          newShot={startShotWith ? () => startShotWith(open.id) : null}
+          chooseRefMod={() => setAdding(open.id)}
+          newShot={startShotWith && found(open) ? () => startShotWith(open.id) : null}
+          openShot={openShot}
+          refresh={refresh}
           notify={notify}
           go={go}
+          Turnaround={Turnaround}
+          startTab={editTab}
           remove={async () => {
             setEditing(null)
             setCharacters(await C.save(characters.filter((x) => x.id !== open.id)))
           }}
-          onClose={() => setEditing(null)}
+          onBack={() => setEditing(null)}
         />
       )}
+      {adding === 'new' && <NewCharacter onClose={() => setAdding(null)} fromPhotos={fromPhotos} onLora={() => (setAdding(null), setPickFor('new'))} onRefMod={() => setAdding('refmod')} onDesign={(n) => (setAdding(null), setName(n), setPath('lora'), setTimeout(() => document.querySelector('.train-own')?.scrollIntoView({ behavior: 'smooth' }), 50))} />}
       {adding === 'choose' && <SourceChooser onClose={() => setAdding(null)} onLora={() => (setAdding(null), setPickFor('new'))} onRefMod={() => setAdding('refmod')} />}
-      {adding && adding !== 'choose' && (
+      {adding && adding !== 'choose' && adding !== 'new' && (
         <RefModPicker
           current={adding === 'refmod' ? null : characters.find((c) => c.id === adding)?.refmod}
           onClose={() => setAdding(null)}
@@ -312,7 +341,7 @@ export function CharacterList({ openCharacter, notify, characters, setCharacters
             if (adding === 'refmod') {
               const id = `char${Date.now().toString(36)}`
               setCharacters(await C.save([...characters, { id, name: title, refmod: mod, strength: 1, trigger: '' }]))
-              setEditing(id)
+              openBible(id, 'models')
             } else await saveCharacter(adding, { refmod: mod })
             setAdding(null)
           }}
@@ -328,7 +357,7 @@ export function CharacterList({ openCharacter, notify, characters, setCharacters
             if (pickFor === 'new') {
               const id = `char${Date.now().toString(36)}`
               setCharacters(await C.save([...characters, { id, name: title || loraTitle(name), lora: name, strength: 0.8, trigger: words[0] || 'n4m3' }]))
-              setEditing(id)
+              openBible(id, 'look')
             } else await saveCharacter(pickFor, { lora: name, ...(words[0] ? { trigger: words[0] } : {}) })
             setPickFor(null)
           }}
@@ -339,93 +368,52 @@ export function CharacterList({ openCharacter, notify, characters, setCharacters
 }
 
 // One character's settings in a pop-up: name, trigger, strength, LoRA and voice. Changes save as you type.
-function CharacterSettings({ c, face, found, isRef, chooseRefMod, offer, voices, progress, downloadLabel, picking, save, install, chooseLora, newShot, remove, onClose, notify, go }) {
+// New character: name them, then how to start. Photos make a bible straight away (its Pictures tab opens); a LoRA or
+// RefMod you have opens their pickers; a description goes to Train your own (design faces, then train).
+function NewCharacter({ onClose, fromPhotos, onLora, onRefMod, onDesign }) {
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
   useEffect(() => {
-    const esc = (e) => e.key === 'Escape' && !picking && onClose()
+    const esc = (e) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', esc)
     return () => window.removeEventListener('keydown', esc)
-  }, [picking])
+  }, [])
+  const named = name.trim()
+  const ways = [
+    ['photos', 'From photos', 'Pictures of them from a few sides. Seedance uses them as references, and H3 their face until they have a LoRA.', true],
+    ['lora', 'From a LoRA you have', 'An H3 LoRA in ComfyUI or from Civitai, with its trigger word. Add photos after for Seedance.', false],
+    ['refmod', 'From a RefMod', 'A RefMod you already made. Add photos after for Seedance.', false],
+    ['design', 'From a description', 'Describe who they are; IV Studio designs their face, then you can train their LoRA.', true]
+  ]
+  async function pick(way) {
+    if (way === 'lora') return onLora()
+    if (way === 'refmod') return onRefMod()
+    if (way === 'design') return onDesign(named)
+    setBusy(true)
+    await fromPhotos(named)
+    setBusy(false)
+  }
   return (
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal cast-modal" role="dialog" aria-label={`${c.name} settings`}>
-        <div className="cast-modal-face">{face ? <img src={fileUrl(face)} alt="" /> : <span className="portrait-initial">{c.name.slice(0, 1)}</span>}</div>
-        <div className="cast-modal-body">
-          <div className="cast-modal-top">
-            <input className="cast-modal-name" value={c.name} aria-label="Name" onChange={(e) => save({ name: e.target.value })} />
-            <button className="link-btn mono cast-modal-close" onClick={onClose} aria-label="Close">
-              ✕
+      <div className="modal bible-new" role="dialog" aria-label="New character">
+        <div className="cast-modal-top">
+          <h2>New character</h2>
+          <button className="link-btn mono cast-modal-close" onClick={onClose} aria-label="Close">
+            ✕
+          </button>
+        </div>
+        <label className="bible-field">
+          <span className="mono label">Name</span>
+          <input autoFocus value={name} placeholder="e.g. June Park" onChange={(e) => setName(e.target.value)} />
+        </label>
+        <p className="small dim">How do you want to start? You can add the rest later: photos, LoRAs, their look and voice all live in one character. Only invented people, or real people who agreed to it.</p>
+        <div className="bible-ways">
+          {ways.map(([id, title, sub, needsName]) => (
+            <button key={id} className="bible-way" disabled={busy || (needsName && !named)} onClick={() => pick(id)} title={needsName && !named ? 'Name them first' : ''}>
+              <span className="bible-way-title">{title}</span>
+              <span className="small dim">{sub}</span>
             </button>
-          </div>
-          <div className="cast-modal-status">
-            <span className={`mono small ${found ? 'cloud-ok' : 'pink'}`}>{isRef ? (found ? '● RefMod found in ComfyUI' : '● RefMod not in ComfyUI') : found ? '● LoRA found in ComfyUI' : '● LoRA not in ComfyUI'}</span>
-            {!found && offer && (
-              <button className="btn btn-small btn-primary" disabled={progress != null} onClick={install}>
-                {downloadLabel(c.id, offer.lora.size)}
-              </button>
-            )}
-          </div>
-
-          <div className="cast-fields">
-            {isRef ? (
-              <div className="cast-field">
-                <span className="mono label">In prompts</span>
-                <span className="small">
-                  <span className="mono">{'{char}'}</span> becomes <b>{c.name}</b>, and the RefMod shows H3 who that is.
-                </span>
-              </div>
-            ) : (
-              <label className="cast-field">
-                <span className="mono label">Trigger word</span>
-                <input className="mono" value={c.trigger} onChange={(e) => save({ trigger: e.target.value })} />
-              </label>
-            )}
-            <label className="cast-field">
-              <span className="mono label">
-                Strength <span className="cast-value">{Number(c.strength).toFixed(2)}</span>
-              </span>
-              <input type="range" min={0} max={1.5} step={0.05} value={c.strength} onChange={(e) => save({ strength: Number(e.target.value) })} />
-            </label>
-            <div className="cast-field cast-field-wide">
-              <span className="mono label">{isRef ? 'RefMod' : 'LoRA file'}</span>
-              <div className="lora-field">
-                {isRef ? <input className="mono" value={c.refmod} title={c.refmod} readOnly /> : <input list="iv-loras" value={c.lora} title={c.lora} onChange={(e) => save({ lora: e.target.value })} />}
-                <button className="btn btn-small" onClick={isRef ? chooseRefMod : chooseLora}>
-                  Choose
-                </button>
-              </div>
-            </div>
-            <label className="cast-field cast-field-wide">
-              <span className="mono label">Voice</span>
-              <select value={c.voiceId || ''} onChange={(e) => save({ voiceId: e.target.value || null, voiceDeclined: !e.target.value })}>
-                <option value="">No voice</option>
-                {voices.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <Turnaround c={c} face={face} notify={notify} go={go} />
-
-          <div className="cast-modal-foot">
-            <button
-              className="link-btn mono danger"
-              onClick={async () => (await ask({ title: `Delete “${c.name}”?`, message: `Only the preset goes; its ${isRef ? 'RefMod' : 'LoRA'} file stays in ComfyUI, and shots already made with it keep working.`, confirm: 'Delete', danger: true })) && remove()}
-            >
-              Delete
-            </button>
-            <span className="cast-modal-spacer" />
-            {newShot && found && (
-              <button className="btn btn-small" onClick={newShot}>
-                New shot with {c.name.split(' ')[0]}
-              </button>
-            )}
-            <button className="btn btn-small btn-primary" onClick={onClose}>
-              Done
-            </button>
-          </div>
+          ))}
         </div>
       </div>
     </div>

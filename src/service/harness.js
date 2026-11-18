@@ -7,13 +7,13 @@ import os from 'node:os'
 import path from 'node:path'
 import { findHermes, hermesTurn } from './hermesacp.js'
 
-export const HARNESSES = { claude: 'Claude Code', codex: 'Codex', hermes: 'Hermes' }
+export const HARNESSES = { claude: 'Claude', codex: 'ChatGPT', hermes: 'Hermes' }
 // a writer that's one of the person's agent apps (not the local model or Context IR)
 export const isHarness = (engine) => engine === 'claude' || engine === 'codex' || engine === 'hermes'
 
 // Claude Code takes these names; '' leaves the choice to the person's Claude Code settings.
 export const CLAUDE_MODELS = [
-  { id: '', name: 'Your Claude Code default' },
+  { id: '', name: 'Your Claude default' },
   { id: 'claude-opus-5-5', name: 'Claude Opus 5.5' },
   { id: 'claude-sonnet-5-5', name: 'Claude Sonnet 5.5' },
   { id: 'claude-haiku-5-5', name: 'Claude Haiku 5.5' },
@@ -81,7 +81,7 @@ export function codexModels(env = process.env, home = os.homedir()) {
   return [
     {
       id: '',
-      name: configured ? `Your Codex default (${configured})` : 'Your Codex default'
+      name: configured ? `Your ChatGPT default (${configured})` : 'Your ChatGPT default'
     },
     ...listed
   ]
@@ -190,7 +190,7 @@ export async function harnessJson({ engine, model, system, user, schema, images 
         { input: user, cwd: dir, timeoutMs }
       )
       const res = JSON.parse(out)
-      if (res.is_error) throw new Error(`Claude Code: ${String(res.result || res.subtype || 'error').slice(0, 300)}`)
+      if (res.is_error) throw new Error(`Claude: ${String(res.result || res.subtype || 'error').slice(0, 300)}`)
       if (res.structured_output) return res.structured_output
       return JSON.parse(String(res.result || '').replace(/^```(?:json)?\s*|\s*```$/g, ''))
     }

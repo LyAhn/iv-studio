@@ -15,13 +15,14 @@ import { applyPatch, planFinish, planPreviews } from './plan.js'
 import { applyFinishSpeed, applySpeed, withPreviewSize } from './speed.js'
 import { adaptGraph, capabilities, LIVE_NODE, withLivePreview, withLivePreviewAll } from './remote.js'
 import { Cast, resolveMentions, withCast } from './cast.js'
+import { faceOf, h3Request, needsMove, normalize, pictureId, seedancePictures } from './bible.js'
 import { contextIrGraph, fromContextIr, writeHarness, writeLocal, writeStoryLocal } from './prompter.js'
 import { cleanSequenceLoras, MAX_REF_PICTURES, renderOutGraph, retakeGraph, SAVES, SEQUENCE_DEFAULTS, takeGraph, takeKindOf, takeReferences, takeScript, validateSequence } from './sequence.js'
 import { checkSetup, comboOptions, fileBase, modelFileMap, whyUnreached } from './setup.js'
 import { comfyPlace, installPacks, missingPacks, packsNeedingRuntime, packsOutdated } from './nodepacks.js'
 import { checkUpdates, copySnapshot, MANAGER_PACK, packFolders, readRecord, reenable, restart, undo, update, writeRecord } from './comfyupdate.js'
 import { comfyUp, isDesktopLauncher, isLocalUrl } from './comfylauncher.js'
-import { finalFrom, finalGraph, graphProblems, NODES as SEEDANCE_NODES, planSeedance, SEEDANCE, seedanceGraph, seedanceMentions, sizeOf, takesFrom, FINAL_FROM_DRAFT } from './seedance.js'
+import { finalFrom, finalGraph, graphProblems, modelsIn, NODES as SEEDANCE_NODES, planSeedance, tiersIn, SEEDANCE, seedanceGraph, seedanceMentions, sizeOf, takesFrom, FINAL_FROM_DRAFT } from './seedance.js'
 import { infoFor, priceGraph } from './pricing.js'
 import { writeSeedance } from './seedwriter.js'
 import { REFINE_DEFAULTS, refineGraph } from './h3refine.js'
@@ -193,12 +194,71 @@ export class Studio {
   }
 
   // ---------- characters ----------
+  // Character bibles (bible.js). Reading never writes: an old characters.json (presets) is read as bibles, and
+  // moved over the first time something saves, its original kept beside it (characters.v1-<time>.json); every old
+  // field stays where the rest of IV Studio reads it.
   characters() {
-    return readJson(path.join(this.dataDir, 'characters.json'), DEFAULT_CHARACTERS)
+    const list = readJson(path.join(this.dataDir, 'characters.json'), null)
+    return (Array.isArray(list) ? list : DEFAULT_CHARACTERS).map(normalize)
   }
   saveCharacters(list) {
-    writeJson(path.join(this.dataDir, 'characters.json'), list)
-    return list
+    const file = path.join(this.dataDir, 'characters.json')
+    const stored = readJson(file, null)
+    if (needsMove(stored)) fs.copyFileSync(file, path.join(this.dataDir, `characters.v1-${new Date().toISOString().replace(/[:.]/g, '-')}.json`))
+    const out = list.map(normalize)
+    writeJson(file, out)
+    return out
+  }
+  // One character, changed (a bible patch) or new (no id). Returns the saved character.
+  saveCharacter(patch) {
+    const list = this.characters()
+    if (!patch.id) {
+      if (!String(patch.name || '').trim()) throw new Error('Give the character a name.')
+      const id = `char${Date.now().toString(36)}`
+      return this.saveCharacters([...list, { trigger: '', strength: 0.8, ...patch, id }]).find((c) => c.id === id)
+    }
+    if (!list.some((c) => c.id === patch.id)) throw new Error(`No character ${patch.id}.`)
+    return this.saveCharacters(list.map((c) => (c.id === patch.id ? { ...c, ...patch } : c))).find((c) => c.id === patch.id)
+  }
+  // Pictures into a character's own folder in the data folder (characters/<id>/), so moving or deleting the
+  // originals doesn't lose them. files: paths; role: one of bible.js ROLES for all of them (else 'face' for the first
+  // picture of a character without one, 'other' after).
+  addCharacterPictures(id, files, role = null) {
+    const c = this.characters().find((x) => x.id === id)
+    if (!c) throw new Error(`No character ${id}.`)
+    const dir = path.join(this.dataDir, 'characters', id)
+    fs.mkdirSync(dir, { recursive: true })
+    const pictures = [...c.pictures]
+    for (const f of files || []) {
+      if (!f || !fs.existsSync(f)) throw new Error(`That picture isn't there: ${f}`)
+      if (!/\.(png|jpe?g|webp|bmp)$/i.test(f)) throw new Error(`${path.basename(f)} isn't a picture IV Studio can use (PNG, JPEG, WebP).`)
+      const pid = pictureId()
+      const copy = path.join(dir, `${pid}${path.extname(f).toLowerCase()}`)
+      fs.copyFileSync(f, copy)
+      pictures.push({ id: pid, file: copy, role: role || (pictures.some((p) => p.role === 'face') ? 'other' : 'face') })
+    }
+    return this.saveCharacter({ id, pictures, picture: faceOf(pictures) })
+  }
+  // A picture out of a character (its copy in the character's folder goes too; pictures elsewhere are left alone).
+  removeCharacterPicture(id, pid) {
+    const c = this.characters().find((x) => x.id === id)
+    if (!c) throw new Error(`No character ${id}.`)
+    const p = c.pictures.find((x) => x.id === pid)
+    if (!p) return c
+    const pictures = c.pictures.filter((x) => x !== p)
+    const saved = this.saveCharacter({ id, pictures, picture: faceOf(pictures) })
+    if (path.resolve(path.dirname(p.file)).toLowerCase() === path.resolve(this.dataDir, 'characters', id).toLowerCase()) fs.rmSync(p.file, { force: true })
+    return saved
+  }
+  // The request an H3 shot renders with, its character as the bible says (bible.js h3Request): a character without a
+  // usable H3 LoRA or RefMod comes in through their picture, or by name. loras: ComfyUI's LoRA names, when known.
+  h3Character(request, loras = null) {
+    const characters = this.characters()
+    const c = characters.find((x) => x.id === request.character)
+    if (!c) return { request, notes: [] }
+    const handle = this.cast.members().find((m) => m.kind === 'character' && m.id === c.id)?.handle || null
+    const exists = loras ? (name) => loras.some((l) => l.replace(/\\/g, '/').toLowerCase() === String(name).replace(/\\/g, '/').toLowerCase()) : () => true
+    return h3Request(request, characters, { handle, exists })
   }
 
   // ---------- projects ----------
@@ -408,7 +468,10 @@ export class Studio {
       return { resolved: { ...p.resolved, model: 'LTX 2.5' }, groups: [], notes: [], mode: p.request.mode, engine: LTX, finish: { width: p.resolved.finalWidth, height: p.resolved.finalHeight, fps: p.resolved.fps, frames: p.resolved.frames, seconds: p.resolved.seconds } }
     }
     const members = this.cast.members()
-    const { request, notes } = resolveMentions(withCast(applySpeed(withPreviewSize(given, this.previewSize?.())), members), members)
+    // a character without an H3 LoRA or RefMod comes in through their picture (bible.js)
+    const bible = this.h3Character(applySpeed(withPreviewSize(given, this.previewSize?.())))
+    const { request, notes: said } = resolveMentions(withCast(bible.request, members), members)
+    const notes = [...bible.notes, ...said]
     const plan = planPreviews(request, this.characters())
     const out = { resolved: plan.resolved, groups: plan.groups, notes, mode: request.mode }
     if (finish !== false) out.finish = planFinish(plan, { candidate: 1, ...(finish || {}) }).resolved
@@ -436,7 +499,11 @@ export class Studio {
     // @ mentions (cast.js): the picked character's becomes {char}; anyone or anywhere else with a picture is attached.
     // extra: members only this shot can mention (a music video's references: people, products, places, things)
     const members = [...this.cast.members(), ...extra.filter((m) => m?.handle && m.picture)]
-    const { request, notes } = resolveMentions(withCast(asked, members), members)
+    // the character as the bible says (bible.js): without an H3 LoRA (one ComfyUI has) or RefMod, through their picture
+    const known = characterOverride ? null : await this.loraNames().catch(() => null)
+    const bible = characterOverride ? { request: asked, notes: [] } : this.h3Character(asked, known?.length ? known : null)
+    const { request, notes: said } = resolveMentions(withCast(bible.request, members), members)
+    const notes = [...bible.notes, ...said]
     const unknown = notes.filter((n) => n.level === 'error')
     if (unknown.length) throw new Error(unknown.map((n) => n.message).join(' '))
     const project = projectId ? this.getProject(projectId) : this.createProject(projectName || shotName(request.prompt, this.characters().find((c) => c.id === request.character)))
@@ -540,9 +607,17 @@ export class Studio {
     const unknown = notes.filter((n) => n.level === 'error')
     if (unknown.length) throw new Error(unknown.map((n) => n.message).join(' '))
     const character = request.character && request.character !== 'none' ? this.characters().find((c) => c.id === request.character) : null
-    const plan = planSeedance(request, this.characters(), { face: character ? this.facePicture(character, this.resourcesDir) : null })
+    // the character's pictures from their bible (bible.js): face, three-quarter and full body first
+    const own = character ? seedancePictures(character).filter((p) => fs.existsSync(p.file)) : []
+    const plan = planSeedance(request, this.characters(), { face: character ? this.facePicture(character, this.resourcesDir) : null, pictures: own })
     plan.notes = [...notes.map((n) => n.message), ...plan.notes]
     return plan
+  }
+
+  // The Seedance qualities this ComfyUI can make (seedance.js SEEDANCE_TIERS keys), e.g. Flash only after 0.45.0.
+  async seedanceTiers() {
+    const info = await infoFor(this.comfy, { a: { class_type: SEEDANCE_NODES.text } }).catch(() => null)
+    return info?.[SEEDANCE_NODES.text] ? tiersIn(info) : []
   }
 
   planSeedanceRender(asked) {
@@ -560,6 +635,8 @@ export class Studio {
     const probe = { a: { class_type: plan.node.cls }, b: { class_type: 'SaveVideo' }, c: { class_type: 'PreviewAny' }, d: { class_type: 'LoadImage' }, e: { class_type: 'LoadVideo' }, f: { class_type: 'LoadAudio' } }
     const info = await infoFor(this.comfy, probe)
     if (!info[plan.node.cls]) throw new Error(`This ComfyUI has no ${plan.node.cls}. Seedance 2.5 needs ComfyUI 0.44 or newer (Settings → Setup → Updates).`)
+    const offered = modelsIn({ [SEEDANCE_NODES.text]: info[plan.node.cls] })
+    if (offered.length && !offered.includes(plan.resolved.model)) throw new Error(`This ComfyUI doesn't have ${plan.resolved.model} yet. It comes with a newer ComfyUI (Settings → Setup → Updates).`)
     const graph = seedanceGraph(plan, staged, info, name)
     if (stage) {
       const problems = graphProblems(graph, info)

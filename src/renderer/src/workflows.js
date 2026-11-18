@@ -21,7 +21,7 @@ export const WORKFLOWS = [
     name: 'Sizzle',
     tag: 'A website, made into a film',
     about: 'Put in a web address. Your agent storyboards a promo film from the real site, then H3 shots, pictures, music and the site’s own screens are cut together with motion and typography.',
-    needs: ['Claude Code or Codex', 'Shinobi', 'H3, a picture model and a music model on this PC']
+    needs: ['Claude or ChatGPT', 'Shinobi', 'H3, a picture model and a music model on this PC']
   },
   {
     page: 'effects',
@@ -56,14 +56,14 @@ export const WORKFLOWS = [
     name: 'Shinobi',
     tag: 'Edits your agent cuts',
     about: 'Hand footage to an agent (or a one-click style) and get a finished edit: cuts on the beat, speed ramps, typography, effects and sound.',
-    needs: ['Shinobi’s engine (one click, about 440 MB)', 'Claude Code or Codex, or a one-click style']
+    needs: ['Shinobi’s engine (one click, about 440 MB)', 'Claude or ChatGPT, or a one-click style']
   },
   {
     page: 'rebuild',
     name: 'Rebuild',
     tag: 'A video, taken apart and rebuilt',
     about: 'Bring a video you made. IV Studio reads it shot by shot, your agent plans how each shot is remade, you approve the plan and the frames, H3 renders the new shots and a first cut lands in Edit beside the original.',
-    needs: ['Claude Code or Codex', 'H3 on this PC']
+    needs: ['Claude or ChatGPT', 'H3 on this PC']
   }
 ]
 

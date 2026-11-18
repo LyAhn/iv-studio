@@ -16,7 +16,7 @@ export const codexHome = (env = process.env, home = os.homedir()) => env.CODEX_H
 export function codexImageStatus(env = process.env, home = os.homedir(), platform = process.platform) {
   const exe = findHarnesses(env, home, platform).codex
   const signedIn = fs.existsSync(path.join(codexHome(env, home), 'auth.json'))
-  const missing = [...(exe ? [] : ['Codex (the ChatGPT Codex app or its command-line tool)']), ...(exe && !signedIn ? ['a ChatGPT sign-in in Codex'] : [])]
+  const missing = [...(exe ? [] : ['ChatGPT’s coding app (Codex) or its command-line tool']), ...(exe && !signedIn ? ['a ChatGPT sign-in'] : [])]
   return { exe, signedIn, ready: !!exe && signedIn, missing }
 }
 
@@ -54,7 +54,7 @@ export function readCodexEvents(text) {
     if (e.type === 'thread.started') out.thread = e.thread_id
     else if (e.type === 'item.completed' && e.item?.type === 'agent_message' && e.item.text) out.said.push(e.item.text.trim())
     else if (e.type === 'error' && e.message) out.errors.push(e.message)
-    else if (e.type === 'turn.failed') out.errors.push(e.error?.message || 'Codex stopped.')
+    else if (e.type === 'turn.failed') out.errors.push(e.error?.message || 'ChatGPT stopped.')
   }
   return out
 }
@@ -89,7 +89,7 @@ export function codexImage({ mode = 'generate', prompt, aspect = '1:1', refs = [
     child.stderr.on('data', (d) => (err = (err + d).slice(-4000)))
     child.on('error', (e) => {
       clearTimeout(timer)
-      reject(new Error(`Codex couldn't start: ${e.message}`))
+      reject(new Error(`ChatGPT couldn't start: ${e.message}`))
     })
     child.on('close', (code) => {
       clearTimeout(timer)
@@ -100,8 +100,8 @@ export function codexImage({ mode = 'generate', prompt, aspect = '1:1', refs = [
       const pics = runPictures(ev.thread, home)
       if (pics.length) return resolve(pics[pics.length - 1])
       if (child.killed) return reject(new Error('Stopped.'))
-      const why = ev.errors.pop() || ev.said.pop() || err.trim().split('\n').filter((l) => !/^\d{4}-\d\d-\d\dT/.test(l)).pop() || `Codex stopped (code ${code}) without a picture.`
-      reject(new Error(/login|sign.?in|auth|401/i.test(why) ? `Codex isn't signed in to ChatGPT. Open Codex and sign in, then try again. (${why.slice(0, 200)})` : `ChatGPT made no picture: ${why.slice(0, 400)}`))
+      const why = ev.errors.pop() || ev.said.pop() || err.trim().split('\n').filter((l) => !/^\d{4}-\d\d-\d\dT/.test(l)).pop() || `ChatGPT stopped (code ${code}) without a picture.`
+      reject(new Error(/login|sign.?in|auth|401/i.test(why) ? `ChatGPT isn't signed in. Open it and sign in with your ChatGPT account, then try again. (${why.slice(0, 200)})` : `ChatGPT made no picture: ${why.slice(0, 400)}`))
     })
     child.stdin.end(codexImagePrompt({ mode, prompt, aspect, refs: refs.length }))
   })

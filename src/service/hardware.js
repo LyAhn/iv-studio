@@ -193,7 +193,7 @@ export function recommend(scan) {
   }
 
   // the processor (for the writer and voices on the CPU)
-  verdicts.push({ id: 'cpu', label: 'Processor', value: `${scan.cpu?.model || 'Unknown'} · ${scan.cpu?.threads || '?'} threads`, state: (scan.cpu?.threads || 0) >= 12 ? 'good' : 'ok', say: (scan.cpu?.threads || 0) >= 12 ? 'The local prompt writer can work here while the graphics card renders.' : 'The local prompt writer will be slow while a render runs; Claude Code or Codex write faster.' })
+  verdicts.push({ id: 'cpu', label: 'Processor', value: `${scan.cpu?.model || 'Unknown'} · ${scan.cpu?.threads || '?'} threads`, state: (scan.cpu?.threads || 0) >= 12 ? 'good' : 'ok', say: (scan.cpu?.threads || 0) >= 12 ? 'The local prompt writer can work here while the graphics card renders.' : 'The local prompt writer will be slow while a render runs; Claude or ChatGPT write faster.' })
 
   // where the models go
   const local = tier.renderOn !== 'cloud'
@@ -227,11 +227,11 @@ export function recommend(scan) {
   // the prompt writer
   const writer = ins.claude ? 'claude' : ins.codex ? 'codex' : 'local'
   const writerSay = {
-    claude: 'Claude Code is on this PC: it writes the best prompts and reviews takes.',
-    codex: 'Codex is on this PC: it writes good prompts and reviews takes.',
-    local: ins.ollama ? 'The local writer (Ollama) is ready; it runs on the processor while a render uses the graphics card.' : 'Install Ollama for a free local writer, or sign in to Claude Code or Codex for better prompts.'
+    claude: 'Claude is on this PC: it writes the best prompts and reviews takes.',
+    codex: 'ChatGPT is on this PC: it writes good prompts and reviews takes.',
+    local: ins.ollama ? 'The local writer (Ollama) is ready; it runs on the processor while a render uses the graphics card.' : 'Install Ollama for a free local writer, or sign in to Claude or ChatGPT for better prompts.'
   }[writer]
-  verdicts.push({ id: 'writer', label: 'Prompt writer', value: { claude: 'Claude Code', codex: 'Codex', local: ins.ollama ? 'Local (Ollama)' : 'Not set up' }[writer], state: writer === 'local' && !ins.ollama ? 'ok' : 'good', say: writerSay })
+  verdicts.push({ id: 'writer', label: 'Prompt writer', value: { claude: 'Claude', codex: 'ChatGPT', local: ins.ollama ? 'Local (Ollama)' : 'Not set up' }[writer], state: writer === 'local' && !ins.ollama ? 'ok' : 'good', say: writerSay })
 
   // what to set
   const nvidia = g?.vendor === 'nvidia'

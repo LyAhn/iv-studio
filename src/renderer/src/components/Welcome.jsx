@@ -29,7 +29,7 @@ const STEPS = [
 const ART = { hello: '', you: '', pc: 'pc-card', way: 'pc-path', get: 'pc-path', done: '' }
 const GB = 1024 ** 3
 const gbs = (b) => (b / GB >= 1000 ? `${(b / GB / 1024).toFixed(1)} TB` : `${b / GB >= 100 ? Math.round(b / GB) : (b / GB).toFixed(b / GB < 10 ? 1 : 0)} GB`)
-const WRITERS = { claude: 'Claude Code', codex: 'Codex', hermes: 'Hermes', local: 'Local (Ollama)' }
+const WRITERS = { claude: 'Claude', codex: 'ChatGPT', hermes: 'Hermes', local: 'Local (Ollama)' }
 
 // small line icons, in the app's style
 const Icon = ({ name }) => {
@@ -423,8 +423,8 @@ function MakeItYours({ isNew, names, setNames, agents, simple, words, hc, contra
             value={names.chatEngine || (has.claude ? 'claude' : has.codex ? 'codex' : has.hermes ? 'hermes' : 'local')}
             onChange={(v) => setNames({ ...names, chatEngine: v })}
             options={[
-              ['claude', 'Claude Code', !has.claude && 'Claude Code isn’t on this PC'],
-              ['codex', 'Codex', !has.codex && 'Codex isn’t on this PC'],
+              ['claude', 'Claude', !has.claude && 'Claude isn’t on this PC'],
+              ['codex', 'ChatGPT', !has.codex && 'ChatGPT isn’t on this PC'],
               ['hermes', 'Hermes', !has.hermes && 'Hermes isn’t on this PC'],
               ['local', 'Local AI', !has.local && 'Local AI needs Ollama on this PC']
             ]}
@@ -432,8 +432,8 @@ function MakeItYours({ isNew, names, setNames, agents, simple, words, hc, contra
         ) : (
           <p className="dim small">
             {isNew
-              ? 'The helper runs on an app such as Claude Code or Codex, on your own plan. You don’t need one to start: a few steps on, IV Studio shows how to add one, or add it later in Settings.'
-              : 'No Claude Code, Codex or Hermes on this PC yet. The “Your way” step can install Claude Code or Codex; the name is kept for when you do.'}
+              ? 'The helper runs on an app such as Claude or ChatGPT, on your own plan. You don’t need one to start: a few steps on, IV Studio shows how to add one, or add it later in Settings.'
+              : 'No Claude, ChatGPT or Hermes on this PC yet. The “Your way” step can install Claude or ChatGPT; the name is kept for when you do.'}
           </p>
         )}
       </section>
@@ -480,7 +480,7 @@ function scanRows({ scan, rec }) {
     { icon: 'cpu', label: 'Processor', value: v.cpu?.value, state: v.cpu?.state },
     { icon: 'disk', label: 'Drives', value: (scan.drives || []).map((d) => `${d.path.replace(/\\$/, '')} ${gbs(d.free)} free`).join(' · ') || 'Unknown', state: v.disk?.state || 'ok' },
     { icon: 'pc', label: 'ComfyUI', value: i.comfyRunning ? 'Running' : i.comfyElsewhere ? `Running at ${i.comfyElsewhere.replace(/^https?:\/\//, '')}` : i.comfyFound ? 'Installed, not running' : 'Not found', state: i.comfyRunning ? 'great' : i.comfyElsewhere ? 'good' : i.comfyFound ? 'ok' : 'weak' },
-    { icon: 'writer', label: 'Prompt writers', value: [i.claude && 'Claude Code', i.codex && 'Codex', i.ollama && 'Ollama'].filter(Boolean).join(' · ') || 'None yet', state: i.claude || i.codex || i.ollama ? 'good' : 'ok' },
+    { icon: 'writer', label: 'Prompt writers', value: [i.claude && 'Claude', i.codex && 'ChatGPT', i.ollama && 'Ollama'].filter(Boolean).join(' · ') || 'None yet', state: i.claude || i.codex || i.ollama ? 'good' : 'ok' },
     { icon: 'ram', label: 'Voices', value: i.voices ? 'Set up' : 'Not set up yet', state: i.voices ? 'good' : 'ok' },
     { icon: 'cloud', label: 'Cloud', value: i.cloud ? 'Set up' : 'Not set up yet', state: i.cloud ? 'good' : 'ok' }
   ]
@@ -686,8 +686,8 @@ function Way({ rec, way, setWay, prefs, setPrefs, writer, setWriter, installs, a
       </section>
       <section className="block create-step wel-agents">
         <StepHead
-          title={isNew ? 'Add a helper (optional)' : 'Do you use Claude Code or Codex?'}
-          sub={isNew ? 'Claude Code and Codex are AI helpers you sign in to with your own plan. With one, you can ask for a video in plain words and it does the steps for you. Not sure? Skip it; everything works without.' : 'If you have either, IV Studio can use it on your own plan to write your prompts and to make a whole idea for you from the Dashboard.'}
+          title={isNew ? 'Add a helper (optional)' : 'Do you use Claude or ChatGPT?'}
+          sub={isNew ? 'Claude and ChatGPT are AI helpers you sign in to with your own plan. With one, you can ask for a video in plain words and it does the steps for you. Not sure? Skip it; everything works without.' : 'If you have either, IV Studio can use it on your own plan to write your prompts and to make a whole idea for you from the Dashboard.'}
         />
         <AgentRows setup={agents} notify={notify} />
         <p className="dim small wel-agents-skip">Don’t use either? That’s fine: skip this. The Local writer works without them, and you can add them any time in Settings → Agents.</p>
@@ -702,8 +702,8 @@ function Way({ rec, way, setWay, prefs, setPrefs, writer, setWriter, installs, a
             value={writer}
             onChange={setWriter}
             options={[
-              ['claude', 'Claude Code', !installs.claude && 'Claude Code isn’t on this PC'],
-              ['codex', 'Codex', !installs.codex && 'Codex isn’t on this PC'],
+              ['claude', 'Claude', !installs.claude && 'Claude isn’t on this PC'],
+              ['codex', 'ChatGPT', !installs.codex && 'ChatGPT isn’t on this PC'],
               ['hermes', 'Hermes', !installs.hermes && 'Hermes isn’t on this PC'],
               ['local', 'Local (Ollama)']
             ]}

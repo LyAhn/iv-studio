@@ -18,8 +18,8 @@ export const looksOnly = (tool) => CHAT_READS.test(tool) || LOOKS_TOO.has(tool)
 // Who did it, in words, from how the MCP server was started (env) and the client's own name (MCP initialize).
 const CLIENTS = [
   [/claude[- ]?desktop|claude-ai/i, 'Claude Desktop'],
-  [/claude[- ]?code/i, 'Claude Code'],
-  [/codex/i, 'Codex'],
+  [/claude[- ]?code/i, 'Claude'],
+  [/codex/i, 'ChatGPT'],
   [/hermes/i, 'Hermes'],
   [/openclaw/i, 'OpenClaw'],
   [/cursor/i, 'Cursor'],

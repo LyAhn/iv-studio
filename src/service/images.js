@@ -29,7 +29,7 @@ export const CODEX_FAMILY = {
   engine: 'codex',
   maxRefs: 4,
   licence: 'OpenAI’s usage policies; made on your ChatGPT plan',
-  note: 'Made by ChatGPT through your Codex, on your ChatGPT plan: no ComfyUI or graphics card needed, about half a minute a picture.',
+  note: 'Made by ChatGPT on your own ChatGPT plan: no ComfyUI or graphics card needed, about half a minute a picture.',
   tips: 'Write it the way you’d ask ChatGPT: the subject, the place, the light and the style, in plain sentences. It handles lettering well: put the exact words in quotes. To edit, say what to change and what to keep.'
 }
 const CODEX_AT_ONCE = 2

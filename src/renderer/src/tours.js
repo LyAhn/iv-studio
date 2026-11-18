@@ -24,7 +24,7 @@ export const TOURS = {
       { go: { page: 'audio', section: 'audio' }, at: '.section-switch', title: 'The sound side', text: 'Visual and Audio switch the sidebar. Audio has Voices, Lines, Music and Sounds.' },
       { go: { page: 'media', section: 'video' }, at: '.nav-library', title: 'Library', text: 'Everything you made, in one place: videos, pictures, songs and voice lines.' },
       { go: { page: 'cloud', section: 'video' }, at: '.cloud-guided', title: 'Cloud', text: 'No strong graphics card? Render on your own cloud GPU account instead.' },
-      { go: { page: 'home', section: 'video' }, at: '.chat-open', title: 'Chat with your agent', text: 'Your own Claude Code, Codex, Hermes or Local AI (free, in Ollama), inside IV Studio. Type or talk; it knows what you’re looking at. History keeps earlier conversations, Activity shows what agents did (with Undo), and it can pop out into its own window.' },
+      { go: { page: 'home', section: 'video' }, at: '.chat-open', title: 'Chat with your agent', text: 'Your own Claude, ChatGPT, Hermes or Local AI (free, in Ollama), inside IV Studio. Type or talk; it knows what you’re looking at. History keeps earlier conversations, Activity shows what agents did (with Undo), and it can pop out into its own window.' },
       { go: { page: 'settings', section: 'video' }, at: '.settings-tabs', title: 'Settings and Setup', text: 'How IV Studio works for you, and what ComfyUI has and needs.' },
       { go: { page: 'home', section: 'video' }, at: '.hero-help', title: 'Help on every page', text: 'Every page has this How it works button. Click it any time for a walk through that page, the same way as this tour.' }
     ]
@@ -38,7 +38,7 @@ export const TOURS = {
       { at: '.dash-recent', title: 'Your latest work', text: 'The newest things you made. Click one to watch it and step through its versions.' },
       { at: '.cast-cards', title: 'Your cast', text: 'Your characters, with their faces and voices. New shot starts a shot with them already picked.' },
       { at: '.nav', title: 'Every page', text: 'The sidebar has every page. Visual and Audio at the bottom switch between the picture side and the sound side.' },
-      { at: '.chat-open', title: 'Chat with your agent', text: 'Your own Claude Code, Codex, Hermes or Local AI (free, in Ollama), inside IV Studio. Type or talk; it knows what you’re looking at. History keeps earlier conversations, Activity shows what agents did (with Undo), and it can pop out into its own window.' },
+      { at: '.chat-open', title: 'Chat with your agent', text: 'Your own Claude, ChatGPT, Hermes or Local AI (free, in Ollama), inside IV Studio. Type or talk; it knows what you’re looking at. History keeps earlier conversations, Activity shows what agents did (with Undo), and it can pop out into its own window.' },
       { at: '.engine-badge', title: 'ComfyUI and your GPU', text: 'Whether ComfyUI is ready, and how much of your graphics card and memory is in use. Free memory unloads models when you need room.' },
       { at: '.hero-help', title: 'Help on every page', text: 'This button is on every page. Click it any time to walk through what that page does.' }
     ]
@@ -68,7 +68,7 @@ export const TOURS = {
       { at: 'step:What to make', title: 'Make, edit or fix', text: 'Generate makes new pictures from words. Edit changes a picture you give it. Tools are one-step fixes: inpaint, relight, remove the background, upscale, depth map.' },
       { at: 'step:The tool', title: 'The tool', text: 'Pick a fix. One that still needs its model says so and downloads it here.' },
       { at: 'step:The picture', title: 'The picture', text: 'Drop in a picture, or open one of yours below and press Fix this. For Inpaint, paint over the part to change.' },
-      { at: 'step:The model', title: 'The model', text: 'Each family has its own look and speed. Makes means it creates pictures; edits means it can also change one. ChatGPT Images makes them with ChatGPT through your Codex, on your ChatGPT plan, with no ComfyUI needed. One that says not set up opens what it needs.' },
+      { at: 'step:The model', title: 'The model', text: 'Each family has its own look and speed. Makes means it creates pictures; edits means it can also change one. ChatGPT Images makes them with ChatGPT on your own ChatGPT plan, with no ComfyUI needed. One that says not set up opens what it needs.' },
       { at: 'step:The picture to edit', title: 'The picture to edit', text: 'Drop in the picture to change.' },
       { at: ['step:What it shows', 'step:What to change'], title: 'Describe it', text: 'Write what you want to see, or for Edit, what to change. LoRAs for the chosen model add a look or a style.' },
       { at: 'step:Shape and size', title: 'Shape and size', text: 'The picture shape, its size and how many to make at once.' },
@@ -196,7 +196,7 @@ export const TOURS = {
   shinobi: {
     title: 'Shinobi',
     steps: [
-      { title: 'Edits your agent cuts', text: 'Hand footage, pictures and a song to Shinobi, and your agent (Claude Code or Codex, set up in Settings) cuts a styled edit with you.' },
+      { title: 'Edits your agent cuts', text: 'Hand footage, pictures and a song to Shinobi, and your agent (Claude or ChatGPT, set up in Settings) cuts a styled edit with you.' },
       { at: '.stage-panel', title: 'Start a film', text: 'Name it and start. The first time, this bar sets Shinobi up instead (once, about 440 MB).' },
       { at: '.tool-shelf', title: 'Your films', text: 'Open one to add media, build a first cut and hand it to your agent.' }
     ]
@@ -224,7 +224,7 @@ export const TOURS = {
     steps: [
       { title: 'A video, taken apart and rebuilt', text: 'Bring a video you made, up to 2 minutes. IV Studio reads it shot by shot and makes it again: the same cuts, pacing and captions, the AI shots rendered fresh with H3, and anything you ask changed.' },
       { at: '.stage-panel', title: 'Start here', text: 'Choose the video, say what should change if anything, tick that it’s yours to rework, and read it. It takes seconds.' },
-      { at: '.stage-needs', title: 'What it needs', text: 'Claude Code or Codex, connected to IV Studio in Settings → Agents. Your agent says what each shot is and writes the plan.' },
+      { at: '.stage-needs', title: 'What it needs', text: 'Claude or ChatGPT, connected to IV Studio in Settings → Agents. Your agent says what each shot is and writes the plan.' },
       { at: '.tool-shelf', title: 'Your rebuilds', text: 'Each tile shows how far it got. Open one to carry on.' }
     ]
   },
@@ -234,7 +234,7 @@ export const TOURS = {
       { at: '.flow-progress', title: 'Where it’s at', text: 'Read, plan, frames, shots, cut.' },
       { at: 'step:The shots', title: 'The shots', text: 'Every shot at its own length, with what it is and how it will be made.' },
       { at: 'step:The plan', title: 'The plan', text: 'Your agent writes it. Nothing renders until you approve it here.' },
-      { at: 'step:Your agent', title: 'Your agent', text: 'Copy this into Claude Code or Codex. It changes as the rebuild moves on.' }
+      { at: 'step:Your agent', title: 'Your agent', text: 'Copy this into Claude or ChatGPT. It changes as the rebuild moves on.' }
     ]
   },
   'sizzle-project': {
@@ -289,14 +289,14 @@ export const TOURS = {
       { at: '.set-nav', title: 'Jump around', text: 'Every topic in one list. Click one to jump to it.' },
       { at: '#set-pc', title: 'Your PC', text: 'What your computer can do. Check again re-runs the scan and its recommended defaults.' },
       { at: '.speed-cards', title: 'Speed', text: 'How each new shot starts: Quality, Balanced, Fast or Low memory. The one that suits this PC is marked. Times are from an RTX 4090; smaller cards take longer.' },
-      { at: '#set-you', title: 'You and your agent', text: 'Your name, your agent’s name, and whether it runs on Claude Code, Codex, Hermes or Local AI (Ollama, free on this PC). The chat and the Dashboard use the names.' },
+      { at: '#set-you', title: 'You and your agent', text: 'Your name, your agent’s name, and whether it runs on Claude, ChatGPT, Hermes or Local AI (Ollama, free on this PC). The chat and the Dashboard use the names.' },
       { at: '#set-access', title: 'Colour and accessibility', text: 'Pick the app’s colour (red, blue, purple, orange, or Dark for greys only), then bigger text, higher contrast, less motion, clear focus outlines and underlined links. Each applies at once.' },
       { at: '#set-words', title: 'Words', text: 'Simple words: the app talks in everyday words instead of AI terms, for people new to this. Only the words change.' },
       { at: '#set-comfy', title: 'ComfyUI', text: 'Where ComfyUI is (typing localhost:8000 is fine), and whether IV Studio starts it for you when it opens.' },
       { at: '#set-folders', title: 'Folders', text: 'Where finished videos go, on any drive, and where renders save inside ComfyUI.' },
-      { at: '#set-writer', title: 'Prompt writer', text: 'Who writes your prompts: a free local model in Ollama, your own Claude Code, Codex or Hermes, any OpenAI-compatible server (llama.cpp, vLLM, LM Studio, OpenAI…), or MiniMax’s paid rewriter.' },
+      { at: '#set-writer', title: 'Prompt writer', text: 'Who writes your prompts: a free local model in Ollama, your own Claude, ChatGPT or Hermes, any OpenAI-compatible server (llama.cpp, vLLM, LM Studio, OpenAI…), or MiniMax’s paid rewriter.' },
       { at: '#set-account', title: 'Comfy account', text: 'Your Comfy.org key and credits, for ComfyUI’s paid partner models such as Seedance, Kling and Veo. The balance also shows in the title bar, and IV Studio shows the price and asks before anything paid runs.' },
-      { at: '#set-agents', title: 'Agents', text: 'Connect Claude Code, Codex or any MCP agent, so it can make shots and edits in IV Studio with you.' },
+      { at: '#set-agents', title: 'Agents', text: 'Connect Claude, ChatGPT or any MCP agent, so it can make shots and edits in IV Studio with you.' },
       { at: '.about-terms', title: 'Terms of use', text: 'IV Studio is Powered by MiniMax H3. Read the rules for H3 here and agree once, before your first H3 render. They apply to everything you make with it.' },
       { at: '.about-report', title: 'Report misuse', text: 'Seen something made with IV Studio that breaks the rules, or uses someone without consent? Report misuse emails us, and every report is acted on.' },
       { at: '.about-credits', title: 'Credits', text: 'Everything IV Studio is built on: the models, tools, node packs and libraries, who made each and its licence.' }
