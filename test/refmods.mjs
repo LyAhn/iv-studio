@@ -76,8 +76,9 @@ ok('References mode with only a RefMod character is enough; eight more RefMods a
   assert.throws(() => planPreviews({ ...shot, character: 'r1', refmods: eight }, chars), /At most 7 RefMods/)
 })
 
-ok('sequences refuse a RefMod character in words', () => {
-  assert.throws(() => validateSequence({ character: 'r1', shots: [{ prompt: 'x' }], shotSeconds: 10 }, chars), /RefMod character/)
+ok('a one-take sequence refuses a RefMod character in words; shot by shot takes it', () => {
+  assert.throws(() => validateSequence({ character: 'r1', shots: [{ prompt: 'x' }], shotSeconds: 10 }, chars), /has no H3 LoRA, and a one take needs one\. Use Shot by shot \(it uses their RefMod\)/)
+  assert.doesNotThrow(() => validateSequence({ character: 'r1', method: 'shots', shots: [{ prompt: 'x' }], shotSeconds: 10 }, chars))
 })
 
 console.log(`${passed} checks passed`)
