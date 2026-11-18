@@ -32,6 +32,7 @@ import { Edits, FORMATS, LOUDNESS } from '../service/edits'
 import { EditGen } from '../service/editgen'
 import { Productions } from '../service/productions'
 import { Reels } from '../service/reel'
+import { MusicVideos } from '../service/musicvideo'
 import { Cutouts } from '../service/cutout'
 import { Reframes } from '../service/reframe'
 import { offeredFx, CLIP_FX, FreefieldApps } from '../service/freefield'
@@ -2859,6 +2860,32 @@ app.whenReady().then(() => {
   handle('sequences:finishShot', (id, index, opts) => track(studio.finishShot(id, index, opts)))
   handle('sequences:runsOf', (projectId) => studio.sequenceRunsOf(projectId))
   handle('sequences:linkRun', (id, opts) => studio.linkShotRun(id, opts))
+  // Music video: a song cut into scenes on its bars, each an H3 shot on its own stretch of the song, laid over the
+  // song as an edit (Workflows → Music video; src/service/musicvideo.js)
+  const musicVideos = new MusicVideos({ dataDir: DATA, studio: () => studio, edits })
+  const mvWriter = (request) => {
+    const w = writerFor(readSettings(BASE), request)
+    return studio.writePrompt(request, { engine: w.engine, apiKey: w.engine === 'contextir' ? comfyKey() : null, model: w.model })
+  }
+  handle('mv:list', () => musicVideos.list())
+  handle('mv:get', (id) => musicVideos.refresh(id))
+  handle('mv:create', async (opts) => musicVideos.view((await musicVideos.create(opts)).id))
+  handle('mv:save', (id, patch) => (musicVideos.save(id, patch), musicVideos.view(id)))
+  handle('mv:edit', (id, change) => (musicVideos.edit(id, change), musicVideos.view(id)))
+  handle('mv:map', async (id, opts) => (await musicVideos.map(id, opts), musicVideos.view(id)))
+  handle('mv:delete', (id) => musicVideos.delete(id))
+  handle('mv:hunt', (id, index, opts) => track(musicVideos.hunt(id, index, opts)))
+  handle('mv:huntAll', async (id, opts) => {
+    const r = await musicVideos.huntAll(id, opts)
+    for (const s of r.started) pending.add(s.jobId)
+    return r
+  })
+  handle('mv:finish', (id, index, opts) => track(musicVideos.finish(id, index, opts)))
+  handle('mv:write', (id, opts) => musicVideos.writePrompts(id, opts, mvWriter))
+  handle('mv:assemble', (id, opts) => musicVideos.assemble(id, opts))
+  handle('mv:addRef', (id, ref) => (musicVideos.addRef(id, ref), musicVideos.view(id)))
+  handle('mv:updateRef', (id, refId, patch) => (musicVideos.updateRef(id, refId, patch), musicVideos.view(id)))
+  handle('mv:removeRef', (id, refId) => (musicVideos.removeRef(id, refId), musicVideos.view(id)))
   handle('projects:get', (id) => ({ project: studio.getProject(id), jobs: studio.listJobs(id) }))
   handle('projects:rename', (id, name) => studio.renameProject(id, name))
   handle('projects:delete', (id) => studio.deleteProject(id))

@@ -92,6 +92,21 @@ function split(prompt) {
 
 const escapeRe = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
+// Members are characters and places (the cast), or a music video's references (musicvideo.js): a person, a product,
+// a place or a thing, each with a picture. How each is named, defined and kept in a references prompt:
+const isPerson = (m) => m.kind === 'character' || m.kind === 'person'
+const wordFor = (m) => (isPerson(m) ? m.name.split(/\s+/)[0] : m.name)
+const shortFor = (m) => (isPerson(m) ? m.name.split(/\s+/)[0] : m.kind === 'place' ? `the place ${m.name}` : m.kind === 'product' ? `the product ${m.name}` : `the ${m.name}`)
+function refLines(m, subject, label, inShots) {
+  const about = m.description ? `, ${m.description.replace(/[.\s]+$/, '')}` : ''
+  const keep = (what) => `${subject} (appears in ${inShots}): fully_preserved - ${what}`
+  if (m.kind === 'character') return [`${subject} is ${m.name}, the person in ${label}.`, keep(`${wordFor(m)}'s face, hair and build; pose and clothes follow the shot.`)]
+  if (m.kind === 'person') return [`${subject} is ${m.name}, the person in ${label}${about}.`, keep(`${wordFor(m)}'s face, hair and build; pose and clothes follow the shot.`)]
+  if (m.kind === 'place') return [`${subject} is the place in ${label}: ${m.name}${about}.`, keep('the place, its furniture, light and colours; the framing is newly directed.')]
+  if (m.kind === 'product') return [`${subject} is the product in ${label}: ${m.name}${about}.`, keep('the product exactly as pictured: its shape, colours, logo and label; how it is held and framed follows the shot.')]
+  return [`${subject} is the ${m.name} in ${label}${about}.`, keep('its shape, colours and details as pictured; where it sits follows the shot.')]
+}
+
 // More than one character in a shot (GitHub #30): the others picked in Create's "Who's in it" (request.with, preset
 // ids; request.character stays the one whose LoRA carries them) join the prompt as @ mentions, which
 // resolveMentions then attaches as their face pictures. Their name in the prompt becomes the mention; someone the
@@ -137,12 +152,12 @@ export function resolveMentions(request, members) {
   // Members with a picture become referenced subjects; frames and continue modes can't take more pictures.
   const pictured = others.filter((m) => m.picture)
   for (const m of others.filter((x) => !x.picture)) {
-    prompt = replace(prompt, m, m.kind === 'character' ? m.name.split(/\s+/)[0] : m.name)
-    notes.push({ level: 'warning', message: `@${m.handle} has no picture, so it's written as "${m.name}" and H3 will imagine ${m.kind === 'character' ? 'them' : 'it'}.` })
+    prompt = replace(prompt, m, wordFor(m))
+    notes.push({ level: 'warning', message: `@${m.handle} has no picture, so it's written as "${m.name}" and H3 will imagine ${isPerson(m) ? 'them' : 'it'}.` })
   }
   if (!pictured.length) return { request: { ...request, prompt }, notes }
   if (request.mode === 'frames' || request.mode === 'continue') {
-    for (const m of pictured) prompt = replace(prompt, m, m.kind === 'character' ? m.name.split(/\s+/)[0] : m.name)
+    for (const m of pictured) prompt = replace(prompt, m, wordFor(m))
     notes.push({ level: 'warning', message: `${request.mode === 'frames' ? 'First / last frame' : 'Continue'} mode can't attach pictures, so ${pictured.map((m) => `@${m.handle}`).join(', ')} ${pictured.length > 1 ? 'are' : 'is'} written as words. Use References mode to keep ${pictured.length > 1 ? 'their' : 'its'} look.` })
     return { request: { ...request, prompt }, notes }
   }
@@ -166,11 +181,12 @@ export function resolveMentions(request, members) {
     body = fix(body)
     summary = summary && fix(summary)
     defs = defs.map(fix)
-    defs.push(m.kind === 'character' ? `${subject} is ${m.name}, the person in ${label}.` : `${subject} is the place in ${label}: ${m.name}${m.description ? `, ${m.description.replace(/[.\s]+$/, '')}` : ''}.`)
-    retention.push(m.kind === 'character' ? `${subject} (appears in ${inShots}): fully_preserved - ${m.name.split(/\s+/)[0]}'s face, hair and build; pose and clothes follow the shot.` : `${subject} (appears in ${inShots}): fully_preserved - the place, its furniture, light and colours; the framing is newly directed.`)
+    const [def, keep] = refLines(m, subject, label, inShots)
+    defs.push(def)
+    retention.push(keep)
   }
   const switched = request.mode !== 'reference'
-  if (!summary) summary = `[reference generation] The target video follows the shots below, with ${pictured.map((m) => (m.kind === 'character' ? m.name.split(/\s+/)[0] : `the place ${m.name}`)).join(' and ')} kept from ${pictured.length > 1 ? 'their pictures' : 'its picture'}.`
+  if (!summary) summary = `[reference generation] The target video follows the shots below, with ${pictured.map(shortFor).join(' and ')} kept from ${pictured.length > 1 ? 'their pictures' : 'its picture'}.`
   const out = [
     `subject_definitions:\n${defs.join('\n')}`,
     `summary:\n${summary}`,

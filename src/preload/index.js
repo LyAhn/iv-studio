@@ -192,6 +192,8 @@ contextBridge.exposeInMainWorld('ivstudio', {
   reels: {
     make: call('reels:make')
   },
+  // Music video (src/service/musicvideo.js)
+  musicVideos: { list: call('mv:list'), get: call('mv:get'), create: call('mv:create'), save: call('mv:save'), edit: call('mv:edit'), map: call('mv:map'), remove: call('mv:delete'), hunt: call('mv:hunt'), huntAll: call('mv:huntAll'), finish: call('mv:finish'), write: call('mv:write'), assemble: call('mv:assemble'), addRef: call('mv:addRef'), updateRef: call('mv:updateRef'), removeRef: call('mv:removeRef') },
   cutouts: {
     make: call('cutouts:make')
   },

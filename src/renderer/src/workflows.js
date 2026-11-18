@@ -38,6 +38,13 @@ export const WORKFLOWS = [
     needs: ['Nothing extra: your pictures and a song']
   },
   {
+    page: 'musicvideo',
+    name: 'Music video',
+    tag: 'A song, cut into scenes that sing along',
+    about: 'Pick a song from Music or your own. IV Studio finds its beat, bars and parts and cuts it into scenes of up to 15 s. Your cast sings and plays along to each scene’s own stretch of the song, and the finished scenes land in Edit over the song.',
+    needs: ['H3 on this PC', 'A song (make one on Audio → Music)']
+  },
+  {
     page: 'shinobi',
     name: 'Shinobi',
     tag: 'Edits your agent cuts',
